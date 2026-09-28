@@ -1,0 +1,54 @@
+{
+  "presets": [
+    {
+      "id": "automotive_plant",
+      "name": "Automotive Plant",
+      "description": "Standard automotive manufacturing with 200 Lathes, 50 Turning, 80 Drilling, 30 Soldering machines",
+      "simulation_time": 10000,
+      "machine_categories": [
+        {"name": "Lathe", "count": 200, "mttf": 100, "mean_repair_time": 10},
+        {"name": "Turning", "count": 50, "mttf": 150, "mean_repair_time": 12},
+        {"name": "Drilling", "count": 80, "mttf": 80, "mean_repair_time": 8},
+        {"name": "Soldering", "count": 30, "mttf": 200, "mean_repair_time": 15}
+      ],
+      "adjusters": [
+        {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Turning"]},
+        {"id": 2, "name": "Adjuster 2", "expertise": ["Drilling", "Soldering"]},
+        {"id": 3, "name": "Adjuster 3", "expertise": ["Lathe", "Drilling", "Turning"]}
+      ]
+    },
+    {
+      "id": "small_workshop",
+      "name": "Small Workshop",
+      "description": "Small-scale workshop with 20 Lathes and 10 Drilling machines",
+      "simulation_time": 5000,
+      "machine_categories": [
+        {"name": "Lathe", "count": 20, "mttf": 120, "mean_repair_time": 8},
+        {"name": "Drilling", "count": 10, "mttf": 90, "mean_repair_time": 6}
+      ],
+      "adjusters": [
+        {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Drilling"]}
+      ]
+    },
+    {
+      "id": "heavy_industry",
+      "name": "Heavy Industry Plant",
+      "description": "Large-scale factory with high machine counts and diverse categories",
+      "simulation_time": 20000,
+      "machine_categories": [
+        {"name": "Lathe", "count": 500, "mttf": 80, "mean_repair_time": 12},
+        {"name": "Turning", "count": 200, "mttf": 120, "mean_repair_time": 10},
+        {"name": "Drilling", "count": 300, "mttf": 100, "mean_repair_time": 9},
+        {"name": "Soldering", "count": 150, "mttf": 180, "mean_repair_time": 14},
+        {"name": "Welding", "count": 100, "mttf": 60, "mean_repair_time": 20}
+      ],
+      "adjusters": [
+        {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Turning"]},
+        {"id": 2, "name": "Adjuster 2", "expertise": ["Drilling", "Soldering"]},
+        {"id": 3, "name": "Adjuster 3", "expertise": ["Welding", "Lathe"]},
+        {"id": 4, "name": "Adjuster 4", "expertise": ["Turning", "Drilling", "Soldering"]},
+        {"id": 5, "name": "Adjuster 5", "expertise": ["Lathe", "Turning", "Welding"]}
+      ]
+    }
+  ]
+}
