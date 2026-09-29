@@ -1,0 +1,49 @@
+{
+  "presets": [
+    {
+      "name": "Automotive Plant",
+      "description": "Large automotive manufacturing facility with 360 machines across 4 categories",
+      "simulation_time": 10000,
+      "machine_categories": [
+        { "name": "Lathe", "count": 200, "mttf": 100, "mean_repair_time": 10 },
+        { "name": "Turning", "count": 50, "mttf": 150, "mean_repair_time": 12 },
+        { "name": "Drilling", "count": 80, "mttf": 80, "mean_repair_time": 8 },
+        { "name": "Soldering", "count": 30, "mttf": 200, "mean_repair_time": 15 }
+      ],
+      "adjusters": [
+        { "id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Turning"] },
+        { "id": 2, "name": "Adjuster 2", "expertise": ["Drilling", "Soldering"] },
+        { "id": 3, "name": "Adjuster 3", "expertise": ["Lathe", "Drilling", "Turning"] }
+      ]
+    },
+    {
+      "name": "Small Workshop",
+      "description": "Small workshop with 30 machines and 2 adjusters",
+      "simulation_time": 5000,
+      "machine_categories": [
+        { "name": "Lathe", "count": 15, "mttf": 120, "mean_repair_time": 8 },
+        { "name": "Drilling", "count": 15, "mttf": 90, "mean_repair_time": 6 }
+      ],
+      "adjusters": [
+        { "id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Drilling"] },
+        { "id": 2, "name": "Adjuster 2", "expertise": ["Lathe", "Drilling"] }
+      ]
+    },
+    {
+      "name": "Electronics Assembly",
+      "description": "Electronics factory with soldering-heavy workload",
+      "simulation_time": 8000,
+      "machine_categories": [
+        { "name": "Soldering", "count": 100, "mttf": 60, "mean_repair_time": 5 },
+        { "name": "Drilling", "count": 40, "mttf": 100, "mean_repair_time": 7 },
+        { "name": "Turning", "count": 20, "mttf": 130, "mean_repair_time": 10 }
+      ],
+      "adjusters": [
+        { "id": 1, "name": "Adjuster 1", "expertise": ["Soldering"] },
+        { "id": 2, "name": "Adjuster 2", "expertise": ["Soldering", "Drilling"] },
+        { "id": 3, "name": "Adjuster 3", "expertise": ["Drilling", "Turning"] },
+        { "id": 4, "name": "Adjuster 4", "expertise": ["Soldering", "Turning"] }
+      ]
+    }
+  ]
+}
