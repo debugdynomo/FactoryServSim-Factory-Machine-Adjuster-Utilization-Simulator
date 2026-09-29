@@ -5,7 +5,7 @@
  * Falls back to mock data when the backend is unavailable.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = 'https://factoryservsim-factory-machine-adjuster.onrender.com';
 
 /**
  * Run a simulation with the given factory configuration.
