@@ -268,6 +268,7 @@ class Simulator:
         adjuster = self._find_adjuster_for_machine(machine)
 
         if adjuster is not None:
+            self.queue_manager.remove(adjuster)
             self._start_repair(
                 machine,
                 adjuster,
