@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import ConfiguratorSection from './components/configurator/ConfiguratorSection';
 
+/**
+ * FactoryServSim — Main Application Shell
+ * 
+ * Layout:
+ *   - Configurator (Person 4: frontend/src/components/configurator/)
+ *   - Floor Visualizer (Person 5: frontend/src/components/floor_visualizer/)
+ *   - Analytics Dashboard (Person 6: frontend/src/components/analytics/)
+ */
 export default function App() {
   const [simulationResults, setSimulationResults] = useState(null);
   const [optimizationResults, setOptimizationResults] = useState(null);
@@ -16,7 +24,8 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        {/* Person 4: Factory Configurator */}
         <ConfiguratorSection
           onSimulationComplete={setSimulationResults}
           onOptimizationComplete={setOptimizationResults}
@@ -27,11 +36,9 @@ export default function App() {
             <h2 className="text-lg font-semibold text-slate-900">
               Latest Results
             </h2>
-
             <p className="mt-2 text-sm text-slate-500">
               Simulation and optimization results are now available to the
-              analytics and floor-visualizer modules when those team branches
-              are integrated.
+              analytics and floor-visualizer modules.
             </p>
           </section>
         )}

@@ -1,7 +1,6 @@
-@"
 node_modules/
 dist/
 .env
-.env.*
-!.env.example
-"@ | Set-Content frontend\.gitignore
+.env.local
+.env.*.local
+*.log
