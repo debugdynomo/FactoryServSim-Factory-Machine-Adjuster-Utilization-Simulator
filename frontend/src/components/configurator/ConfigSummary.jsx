@@ -1,0 +1,106 @@
+import React from 'react';
+
+export default function ConfigSummary({
+  simulationTime,
+  categories,
+  adjusters,
+  onSimulation,
+  onOptimization,
+  loading,
+  error,
+}) {
+  const totalMachines = categories.reduce(
+    (total, category) => total + Number(category.count || 0),
+    0,
+  );
+
+  const canRun =
+    Number(simulationTime) > 0 &&
+    categories.length > 0 &&
+    categories.every(
+      (category) =>
+        category.name &&
+        Number(category.count) >= 0 &&
+        Number(category.mttf) > 0 &&
+        Number(category.mean_repair_time) > 0,
+    ) &&
+    adjusters.length > 0 &&
+    adjusters.every((adjuster) => adjuster.expertise.length > 0);
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-5">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Configuration Summary
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Review the configuration before starting the simulation.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Machine categories
+          </p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {categories.length}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Total machines
+          </p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {totalMachines}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Adjusters
+          </p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {adjusters.length}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-slate-200 p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-slate-500">Simulation time</span>
+          <span className="font-medium text-slate-900">
+            {simulationTime}
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          disabled={!canRun || loading}
+          onClick={onSimulation}
+          className="flex-1 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? 'Running...' : 'Run Simulation'}
+        </button>
+
+        <button
+          type="button"
+          disabled={!canRun || loading}
+          onClick={onOptimization}
+          className="flex-1 rounded-lg border border-blue-600 px-4 py-3 font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? 'Processing...' : 'Optimize Adjuster Count'}
+        </button>
+      </div>
+    </section>
+  );
+}
