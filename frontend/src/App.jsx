@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import ConfiguratorSection from './components/configurator/ConfiguratorSection';
+import { FactoryFloorGrid, SingleQueueBar } from './components/floor_visualizer';
+import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 
 /**
- * FactoryServSim — Main Application Shell
+ * FactoryServSim — Unified Full-Stack Application Shell
  * 
- * Layout:
- *   - Configurator (Person 4: frontend/src/components/configurator/)
- *   - Floor Visualizer (Person 5: frontend/src/components/floor_visualizer/)
- *   - Analytics Dashboard (Person 6: frontend/src/components/analytics/)
+ * Integrates:
+ *   - Person 4: Factory Configurator (CategoryForm, AdjusterForm, PresetSelector)
+ *   - Person 5: Live Factory Floor & Single-Queue Visualizer (Grid, QueueBar, Controls)
+ *   - Person 6: Analytics Dashboard (KPIs, Charts, Recommendations, ExportPanel)
  */
 export default function App() {
   const [simulationResults, setSimulationResults] = useState(null);
@@ -24,24 +26,30 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-8">
         {/* Person 4: Factory Configurator */}
         <ConfiguratorSection
           onSimulationComplete={setSimulationResults}
           onOptimizationComplete={setOptimizationResults}
         />
 
-        {(simulationResults || optimizationResults) && (
-          <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Latest Results
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Simulation and optimization results are now available to the
-              analytics and floor-visualizer modules.
-            </p>
-          </section>
-        )}
+        {/* Person 5: Interactive Factory Floor & Single-Queue Visualizer */}
+        <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-900">
+            🏭 Live Factory Floor & Single-Queue State
+          </h2>
+          <SingleQueueBar
+            machineQueueCount={simulationResults?.summary?.inoperative_machines_queue_len ?? 0}
+            idleAdjusterCount={simulationResults?.summary?.idle_adjusters_queue_len ?? 0}
+          />
+          <FactoryFloorGrid machines={simulationResults?.machines ?? []} />
+        </section>
+
+        {/* Person 6: Analytics Dashboard & Staffing Recommendations */}
+        <AnalyticsDashboard
+          simulationResults={simulationResults}
+          optimizationResults={optimizationResults}
+        />
       </main>
     </div>
   );
