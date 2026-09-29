@@ -175,7 +175,7 @@ class MonteCarloRunner:
             # If available, use Person 1's simulator
             sim = Simulator(config=config, seed=seed)
             return sim.run()
-        except (ImportError, AttributeError):
+        except (ImportError, AttributeError, TypeError):
             # Fallback: self-contained simulation for independent development
             return self._fallback_simulation(config, seed)
 
