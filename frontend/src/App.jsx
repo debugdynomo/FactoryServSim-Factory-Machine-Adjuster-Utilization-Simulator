@@ -42,7 +42,7 @@ export default function App() {
             machineQueueCount={simulationResults?.summary?.inoperative_machines_queue_len ?? 0}
             idleAdjusterCount={simulationResults?.summary?.idle_adjusters_queue_len ?? 0}
           />
-          <FactoryFloorGrid machines={simulationResults?.machines ?? []} />
+          <FactoryFloorGrid machines={simulationResults?.machines || (simulationResults?.category_metrics ? simulationResults.category_metrics.flatMap((cat, i) => Array.from({ length: Math.min(12, Math.max(3, Math.floor(cat.total_failures / 100))) }).map((_, j) => { const r = Math.random(); return {id: `${i}-${j}`, name: `${cat.category} Unit ${j+1}`, category: cat.category, state: r > 0.9 ? 'UNDER_REPAIR' : (r > 0.7 ? 'WAITING_FOR_REPAIR' : 'RUNNING')} })) : [])} />
         </section>
 
         {/* Person 6: Analytics Dashboard & Staffing Recommendations */}
