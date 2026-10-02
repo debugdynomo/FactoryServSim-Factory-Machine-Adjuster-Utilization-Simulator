@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { BarChart3, Factory, Wrench, Clock, AlertTriangle, LayoutDashboard, List, Target, RefreshCw, X } from 'lucide-react';
 import UtilizationCharts from './UtilizationCharts';
 import CategoryBreakdown from './CategoryBreakdown';
 import OptimumRecommendation from './OptimumRecommendation';
@@ -31,29 +32,36 @@ import {
 /**
  * KPICard — Displays a single key performance indicator metric.
  */
-function KPICard({ label, value, unit, icon, color, subtitle }) {
+function KPICard({ label, value, unit, icon: Icon, color, subtitle }) {
   const colorClasses = {
-    emerald: 'from-emerald-500 to-emerald-600 shadow-emerald-200',
-    indigo: 'from-indigo-500 to-indigo-600 shadow-indigo-200',
-    amber: 'from-amber-500 to-amber-600 shadow-amber-200',
-    rose: 'from-rose-500 to-rose-600 shadow-rose-200',
+    emerald: 'border-emerald-600 text-emerald-700',
+    indigo: 'border-indigo-600 text-indigo-700',
+    amber: 'border-amber-500 text-amber-600',
+    rose: 'border-rose-600 text-rose-700',
+  };
+
+  const bgClasses = {
+    emerald: 'bg-emerald-50',
+    indigo: 'bg-indigo-50',
+    amber: 'bg-amber-50',
+    rose: 'bg-rose-50',
   };
 
   return (
-    <div
-      className={`bg-gradient-to-br ${
-        colorClasses[color] || colorClasses.emerald
-      } rounded-xl shadow-lg p-5 text-white`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-2xl">{icon}</span>
-        <span className="text-xs uppercase tracking-wider opacity-80">{label}</span>
+    <div className={`bg-white rounded-xl shadow-sm border-l-4 ${colorClasses[color] || colorClasses.emerald} border-t border-r border-b border-gray-200 p-5 flex flex-col`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className={`p-2 rounded-lg ${bgClasses[color] || bgClasses.emerald}`}>
+            <Icon size={20} className={colorClasses[color] || colorClasses.emerald} />
+          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</span>
+        </div>
       </div>
-      <div className="flex items-baseline gap-1">
-        <span className="text-3xl font-bold">{value}</span>
-        {unit && <span className="text-sm opacity-80">{unit}</span>}
+      <div className="flex items-baseline gap-1 mt-1">
+        <span className="text-3xl font-bold text-gray-900">{value}</span>
+        {unit && <span className="text-sm font-medium text-gray-500">{unit}</span>}
       </div>
-      {subtitle && <p className="text-xs opacity-70 mt-1">{subtitle}</p>}
+      {subtitle && <p className="text-xs text-gray-400 mt-2">{subtitle}</p>}
     </div>
   );
 }
@@ -123,20 +131,25 @@ export default function AnalyticsDashboard({
   }, []);
 
   const tabs = [
-    { id: 'overview', label: '📊 Overview', icon: '📊' },
-    { id: 'categories', label: '📋 Categories', icon: '📋' },
-    { id: 'optimization', label: '🎯 Optimization', icon: '🎯' },
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'categories', label: 'Categories', icon: List },
+    { id: 'optimization', label: 'Optimization', icon: Target },
   ];
 
   return (
     <section className="space-y-6" aria-label="Analytics Dashboard">
       {/* Section Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">📊 Analytics Dashboard</h2>
-          <p className="text-sm text-gray-500">
-            Simulation metrics, utilization charts, and staffing recommendations
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="flex items-center gap-4">
+          <div className="bg-slate-800 p-3 rounded-lg text-white">
+            <BarChart3 size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Analytics Dashboard</h2>
+            <p className="text-sm text-slate-500">
+              Simulation metrics, utilization charts, and staffing recommendations
+            </p>
+          </div>
         </div>
 
         {/* Demo Data Controls (for independent development/testing) */}
@@ -144,16 +157,16 @@ export default function AnalyticsDashboard({
           <div className="flex gap-2">
             <button
               onClick={handleLoadDemoData}
-              className="px-4 py-2 bg-factory-accent hover:bg-factory-dark text-white text-sm rounded-lg transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
             >
-              🔄 Load Demo Data
+              <RefreshCw size={16} /> Load Demo Data
             </button>
             {(demoSimResults || demoOptResults) && (
               <button
                 onClick={handleClearData}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors"
               >
-                ✕ Clear
+                <X size={16} /> Clear
               </button>
             )}
           </div>
@@ -166,7 +179,7 @@ export default function AnalyticsDashboard({
           label="Machine Utilization"
           value={formatMetric(kpi.machineUtil)}
           unit="%"
-          icon="🏭"
+          icon={Factory}
           color="emerald"
           subtitle="Overall machine uptime percentage"
         />
@@ -174,7 +187,7 @@ export default function AnalyticsDashboard({
           label="Adjuster Utilization"
           value={formatMetric(kpi.adjusterUtil)}
           unit="%"
-          icon="🔧"
+          icon={Wrench}
           color="indigo"
           subtitle="Overall adjuster busy time"
         />
@@ -182,7 +195,7 @@ export default function AnalyticsDashboard({
           label="Avg Wait Time"
           value={formatMetric(kpi.avgWaitTime, 2)}
           unit="units"
-          icon="⏱️"
+          icon={Clock}
           color="amber"
           subtitle="Average queue wait time"
         />
@@ -190,31 +203,35 @@ export default function AnalyticsDashboard({
           label="Failures Handled"
           value={formatCount(kpi.totalFailures)}
           unit=""
-          icon="🔩"
+          icon={AlertTriangle}
           color="rose"
           subtitle="Total repairs completed"
         />
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === tab.id
-                ? 'border-factory-highlight text-factory-highlight'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex border-b border-gray-200 bg-white px-2 pt-2 rounded-t-xl">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+                activeTab === tab.id
+                  ? 'border-slate-800 text-slate-800'
+                  : 'border-transparent text-gray-500 hover:text-slate-700 hover:border-gray-300'
+              }`}
+            >
+              <Icon size={16} />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab Content */}
-      <div>
+      <div className="mt-4">
         {activeTab === 'overview' && (
           <UtilizationCharts
             tradeoffCurve={optimizationResults?.tradeoff_curve}

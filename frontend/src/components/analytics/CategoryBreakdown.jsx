@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { BarChart3, AlertTriangle, List } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -29,14 +30,14 @@ import {
 
 /** Color palette for category bars */
 const CATEGORY_COLORS = [
-  '#10b981', // emerald
-  '#6366f1', // indigo
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // violet
-  '#14b8a6', // teal
-  '#f97316', // orange
-  '#ec4899', // pink
+  '#059669', // emerald
+  '#1e3a5f', // steel blue
+  '#d97706', // industrial amber
+  '#0f172a', // deep navy
+  '#64748b', // steel gray
+  '#334155', // slate
+  '#475569', // slate light
+  '#0ea5e9', // sky blue
 ];
 
 /**
@@ -46,10 +47,10 @@ function CategoryTooltip({ active, payload, label }) {
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
-      <p className="font-semibold text-gray-700 mb-1">{label}</p>
+    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-semibold text-slate-800 mb-1 border-b border-slate-100 pb-1">{label}</p>
       {payload.map((entry) => (
-        <p key={entry.dataKey} style={{ color: entry.color }}>
+        <p key={entry.dataKey} style={{ color: entry.color }} className="font-medium mt-1">
           {entry.name}: {typeof entry.value === 'number' && entry.value % 1 !== 0
             ? entry.value.toFixed(1) + '%'
             : entry.value.toLocaleString()}
@@ -75,8 +76,9 @@ export default function CategoryBreakdown({ categoryMetrics = [] }) {
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-6 text-center text-gray-400">
-        <p className="text-lg">📊 Category Breakdown</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center flex flex-col items-center justify-center text-slate-500">
+        <BarChart3 size={48} className="text-slate-300 mb-4" />
+        <p className="text-lg font-medium text-slate-700">Category Breakdown</p>
         <p className="text-sm mt-2">
           Run a simulation to see per-category utilization and failure metrics.
         </p>
@@ -87,21 +89,26 @@ export default function CategoryBreakdown({ categoryMetrics = [] }) {
   return (
     <div className="space-y-6">
       {/* Utilization by Category */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          📊 Machine Utilization by Category
-        </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+          <BarChart3 className="text-slate-800" size={20} />
+          <h3 className="text-lg font-semibold text-slate-800">
+            Machine Utilization by Category
+          </h3>
+        </div>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="category" tick={{ fontSize: 12 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis dataKey="category" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
             <YAxis
               domain={[0, 100]}
-              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft' }}
-              tick={{ fontSize: 12 }}
+              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft', fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickLine={false}
             />
-            <Tooltip content={<CategoryTooltip />} />
-            <Legend />
+            <Tooltip content={<CategoryTooltip />} cursor={{ fill: '#f8fafc' }} />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
             <Bar
               dataKey="utilization_pct"
               name="Utilization"
@@ -120,20 +127,25 @@ export default function CategoryBreakdown({ categoryMetrics = [] }) {
       </div>
 
       {/* Total Failures by Category */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          🔧 Total Failures by Category
-        </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+          <AlertTriangle className="text-rose-600" size={20} />
+          <h3 className="text-lg font-semibold text-slate-800">
+            Total Failures by Category
+          </h3>
+        </div>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="category" tick={{ fontSize: 12 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis dataKey="category" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
             <YAxis
-              label={{ value: 'Failures', angle: -90, position: 'insideLeft' }}
-              tick={{ fontSize: 12 }}
+              label={{ value: 'Failures', angle: -90, position: 'insideLeft', fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickLine={false}
             />
-            <Tooltip content={<CategoryTooltip />} />
-            <Legend />
+            <Tooltip content={<CategoryTooltip />} cursor={{ fill: '#f8fafc' }} />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
             <Bar
               dataKey="total_failures"
               name="Total Failures"
@@ -144,7 +156,7 @@ export default function CategoryBreakdown({ categoryMetrics = [] }) {
                 <Cell
                   key={`fail-cell-${index}`}
                   fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                  fillOpacity={0.75}
+                  fillOpacity={0.85}
                 />
               ))}
             </Bar>
@@ -153,51 +165,54 @@ export default function CategoryBreakdown({ categoryMetrics = [] }) {
       </div>
 
       {/* Category Summary Table */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          📋 Category Summary
-        </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-2 p-6 border-b border-gray-100">
+          <List className="text-slate-800" size={20} />
+          <h3 className="text-lg font-semibold text-slate-800">
+            Category Summary
+          </h3>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+            <thead className="bg-slate-50 text-slate-700 uppercase text-xs font-semibold border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3 text-right">Utilization (%)</th>
-                <th className="px-4 py-3 text-right">Total Failures</th>
-                <th className="px-4 py-3 text-right">Status</th>
+                <th className="px-6 py-4">Category</th>
+                <th className="px-6 py-4 text-right">Utilization (%)</th>
+                <th className="px-6 py-4 text-right">Total Failures</th>
+                <th className="px-6 py-4 text-right">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {chartData.map((metric, index) => (
-                <tr key={metric.category} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">
+                <tr key={metric.category} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-slate-800 flex items-center">
                     <span
-                      className="inline-block w-3 h-3 rounded-full mr-2"
+                      className="inline-block w-3 h-3 rounded-sm mr-3 shadow-sm"
                       style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
                     />
                     {metric.category}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono">
+                  <td className="px-6 py-4 text-right font-mono text-slate-700">
                     {metric.utilization_pct.toFixed(1)}%
                   </td>
-                  <td className="px-4 py-3 text-right font-mono">
+                  <td className="px-6 py-4 text-right font-mono text-slate-700">
                     {metric.total_failures.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-6 py-4 text-right">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      className={`inline-flex px-2.5 py-1 rounded-md text-xs font-semibold tracking-wide ${
                         metric.utilization_pct >= 90
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                           : metric.utilization_pct >= 75
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-red-100 text-red-700'
+                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                          : 'bg-rose-100 text-rose-800 border border-rose-200'
                       }`}
                     >
                       {metric.utilization_pct >= 90
-                        ? 'Excellent'
+                        ? 'Optimal'
                         : metric.utilization_pct >= 75
-                        ? 'Good'
-                        : 'Needs Attention'}
+                        ? 'Adequate'
+                        : 'Review'}
                     </span>
                   </td>
                 </tr>

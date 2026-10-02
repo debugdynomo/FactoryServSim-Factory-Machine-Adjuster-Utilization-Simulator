@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Settings, Sliders } from 'lucide-react';
 import CategoryForm from './CategoryForm';
 import AdjusterForm from './AdjusterForm';
 import PresetSelector from './PresetSelector';
@@ -127,35 +128,46 @@ export default function ConfiguratorSection({
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Factory Configurator
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Configure machine categories and adjuster expertise before running
-          the simulation.
-        </p>
+    <div className="space-y-8">
+      <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-900 text-white shadow-sm">
+          <Settings className="h-6 w-6 text-amber-500" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            Factory Configurator
+          </h1>
+          <p className="mt-1 text-sm text-slate-600 font-medium">
+            Configure machine categories and adjuster expertise before running the simulation.
+          </p>
+        </div>
       </div>
 
       <PresetSelector presets={presets} onSelect={applyPreset} />
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
+        <div className="flex items-center gap-2 mb-4">
+          <Sliders className="h-5 w-5 text-slate-700" />
+          <h2 className="text-lg font-semibold text-slate-900">Global Settings</h2>
+        </div>
+        
         <label
           htmlFor="simulation-time"
-          className="mb-1 block text-sm font-medium text-slate-700"
+          className="mb-1.5 block text-sm font-semibold text-slate-700"
         >
-          Simulation time
+          Simulation time (hours)
         </label>
-        <input
-          id="simulation-time"
-          type="number"
-          min="1"
-          step="1"
-          value={simulationTime}
-          onChange={(event) => setSimulationTime(event.target.value)}
-          className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
+        <div className="relative max-w-xs">
+          <input
+            id="simulation-time"
+            type="number"
+            min="1"
+            step="1"
+            value={simulationTime}
+            onChange={(event) => setSimulationTime(event.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 outline-none transition-all focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20"
+          />
+        </div>
       </section>
 
       <CategoryForm

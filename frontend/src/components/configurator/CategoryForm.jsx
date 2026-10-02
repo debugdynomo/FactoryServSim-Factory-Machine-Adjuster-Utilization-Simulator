@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Layers, Hash, Clock, Timer, Plus, Pencil, Trash2, X } from 'lucide-react';
 
 const EMPTY_CATEGORY = {
   name: '',
@@ -114,29 +115,34 @@ export default function CategoryForm({ categories, onChange }) {
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-5">
-        <h2 className="text-lg font-semibold text-slate-900">
-          Machine Categories
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Define the machines in your factory and their failure
-          characteristics.
-        </p>
+    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
+      <div className="mb-6 flex items-start gap-3 border-b border-slate-100 pb-4">
+        <div className="mt-1 rounded-md bg-slate-100 p-2 text-slate-700">
+          <Layers className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">
+            Machine Categories
+          </h2>
+          <p className="mt-1 text-sm font-medium text-slate-500">
+            Define the machines in your factory and their failure
+            characteristics.
+          </p>
+        </div>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-5 md:grid-cols-2 xl:grid-cols-4 rounded-lg bg-slate-50 p-5 border border-slate-200"
         noValidate
       >
         {/* Category Name */}
         <div className="xl:col-span-2">
           <label
             htmlFor="category-name"
-            className="mb-1 block text-sm font-medium text-slate-700"
+            className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700"
           >
+            <Layers className="h-4 w-4 text-slate-400" />
             Category name
           </label>
 
@@ -147,11 +153,11 @@ export default function CategoryForm({ categories, onChange }) {
               updateField('name', event.target.value)
             }
             placeholder="e.g. Lathe"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
           />
 
           {errors.name && (
-            <p className="mt-1 text-xs text-red-600">
+            <p className="mt-1 text-xs font-medium text-red-600">
               {errors.name}
             </p>
           )}
@@ -161,8 +167,9 @@ export default function CategoryForm({ categories, onChange }) {
         <div>
           <label
             htmlFor="category-count"
-            className="mb-1 block text-sm font-medium text-slate-700"
+            className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700"
           >
+            <Hash className="h-4 w-4 text-slate-400" />
             Machine count
           </label>
 
@@ -175,11 +182,11 @@ export default function CategoryForm({ categories, onChange }) {
             onChange={(event) =>
               updateField('count', event.target.value)
             }
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
           />
 
           {errors.count && (
-            <p className="mt-1 text-xs text-red-600">
+            <p className="mt-1 text-xs font-medium text-red-600">
               {errors.count}
             </p>
           )}
@@ -189,9 +196,10 @@ export default function CategoryForm({ categories, onChange }) {
         <div>
           <label
             htmlFor="category-mttf"
-            className="mb-1 block text-sm font-medium text-slate-700"
+            className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700"
           >
-            MTTF
+            <Clock className="h-4 w-4 text-slate-400" />
+            MTTF (hrs)
           </label>
 
           <input
@@ -203,11 +211,11 @@ export default function CategoryForm({ categories, onChange }) {
             onChange={(event) =>
               updateField('mttf', event.target.value)
             }
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
           />
 
           {errors.mttf && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-sm font-medium text-red-600">
               {errors.mttf}
             </p>
           )}
@@ -217,9 +225,10 @@ export default function CategoryForm({ categories, onChange }) {
         <div>
           <label
             htmlFor="category-repair"
-            className="mb-1 block text-sm font-medium text-slate-700"
+            className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700"
           >
-            Mean repair time
+            <Timer className="h-4 w-4 text-slate-400" />
+            Mean repair time (hrs)
           </label>
 
           <input
@@ -234,105 +243,99 @@ export default function CategoryForm({ categories, onChange }) {
                 event.target.value
               )
             }
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
           />
 
           {errors.mean_repair_time && (
-            <p className="mt-1 text-xs text-red-600">
+            <p className="mt-1 text-xs font-medium text-red-600">
               {errors.mean_repair_time}
             </p>
           )}
         </div>
 
         {/* Form Actions */}
-        <div className="flex items-end gap-2 xl:col-span-4">
+        <div className="flex items-end gap-3 xl:col-span-3">
           <button
             type="submit"
-            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
+            className="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2 font-semibold text-white transition hover:bg-slate-800"
           >
-            {editingIndex === null
-              ? 'Add Category'
-              : 'Update Category'}
+            {editingIndex === null ? (
+              <>
+                <Plus className="h-4 w-4" /> Add Category
+              </>
+            ) : (
+              <>
+                <Pencil className="h-4 w-4" /> Update Category
+              </>
+            )}
           </button>
 
           {editingIndex !== null && (
             <button
               type="button"
               onClick={handleCancel}
-              className="rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+              className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2 font-semibold text-slate-700 transition hover:bg-slate-50"
             >
-              Cancel
+              <X className="h-4 w-4" /> Cancel
             </button>
           )}
         </div>
       </form>
 
       {/* Categories Table */}
-      <div className="mt-6 overflow-x-auto">
+      <div className="mt-8 overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
         {categories.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-            No machine categories configured yet.
+          <div className="flex flex-col items-center justify-center bg-slate-50 p-10 text-center text-sm text-slate-500">
+            <Layers className="mb-3 h-8 w-8 text-slate-400" />
+            <p className="font-medium text-slate-600">No machine categories configured yet.</p>
+            <p>Add a category above to get started.</p>
           </div>
         ) : (
           <table className="w-full min-w-[650px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="px-3 py-3 font-medium">
-                  Category
-                </th>
-                <th className="px-3 py-3 font-medium">
-                  Count
-                </th>
-                <th className="px-3 py-3 font-medium">
-                  MTTF
-                </th>
-                <th className="px-3 py-3 font-medium">
-                  Repair Time
-                </th>
-                <th className="px-3 py-3 text-right font-medium">
-                  Actions
-                </th>
+            <thead className="bg-slate-900 text-slate-100">
+              <tr>
+                <th className="px-4 py-3.5 font-semibold">Category</th>
+                <th className="px-4 py-3.5 font-semibold">Count</th>
+                <th className="px-4 py-3.5 font-semibold">MTTF (hrs)</th>
+                <th className="px-4 py-3.5 font-semibold">Repair Time (hrs)</th>
+                <th className="px-4 py-3.5 text-right font-semibold">Actions</th>
               </tr>
             </thead>
-
-            <tbody>
+            <tbody className="divide-y divide-slate-200 bg-white">
               {categories.map((category, index) => (
                 <tr
                   key={`${category.name}-${index}`}
-                  className="border-b border-slate-100 last:border-0"
+                  className="transition hover:bg-slate-50"
                 >
-                  <td className="px-3 py-3 font-medium text-slate-900">
+                  <td className="px-4 py-3.5 font-semibold text-slate-900">
                     {category.name}
                   </td>
-
-                  <td className="px-3 py-3 text-slate-600">
+                  <td className="px-4 py-3.5 font-medium text-slate-700">
                     {category.count}
                   </td>
-
-                  <td className="px-3 py-3 text-slate-600">
+                  <td className="px-4 py-3.5 text-slate-600">
                     {category.mttf}
                   </td>
-
-                  <td className="px-3 py-3 text-slate-600">
+                  <td className="px-4 py-3.5 text-slate-600">
                     {category.mean_repair_time}
                   </td>
-
-                  <td className="px-3 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(index)}
-                      className="mr-3 font-medium text-blue-600 hover:text-blue-800"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(index)}
-                      className="font-medium text-red-600 hover:text-red-800"
-                    >
-                      Delete
-                    </button>
+                  <td className="px-4 py-3.5 text-right">
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(index)}
+                        className="flex items-center gap-1 font-medium text-blue-600 transition hover:text-blue-800"
+                      >
+                        <Pencil className="h-4 w-4" /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(index)}
+                        className="flex items-center gap-1 font-medium text-red-600 transition hover:text-red-800"
+                      >
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

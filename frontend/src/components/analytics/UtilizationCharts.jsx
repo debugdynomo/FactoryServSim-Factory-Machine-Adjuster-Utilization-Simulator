@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { LineChart as LineChartIcon, TrendingUp, Activity } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -26,10 +27,10 @@ import {
  */
 
 const CHART_COLORS = {
-  machineUtilization: '#10b981',   // emerald-500
-  adjusterUtilization: '#6366f1',  // indigo-500
-  optimumLine: '#e94560',          // factory highlight red
-  grid: '#e5e7eb',                 // gray-200
+  machineUtilization: '#059669',   // emerald-600
+  adjusterUtilization: '#1e3a5f',  // steel blue
+  optimumLine: '#d97706',          // industrial amber
+  grid: '#e2e8f0',                 // slate-200
 };
 
 /**
@@ -39,12 +40,12 @@ function ChartTooltip({ active, payload, label }) {
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
-      <p className="font-semibold text-gray-700 mb-1">
+    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-semibold text-slate-800 mb-1 border-b border-slate-100 pb-1">
         {label} Adjuster{label !== 1 ? 's' : ''}
       </p>
       {payload.map((entry) => (
-        <p key={entry.dataKey} style={{ color: entry.color }}>
+        <p key={entry.dataKey} style={{ color: entry.color }} className="font-medium mt-1">
           {entry.name}: {entry.value.toFixed(1)}%
         </p>
       ))}
@@ -68,8 +69,9 @@ export default function UtilizationCharts({ tradeoffCurve = [], optimumCount = n
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-6 text-center text-gray-400">
-        <p className="text-lg">📊 Utilization Charts</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center flex flex-col items-center justify-center text-slate-500">
+        <LineChartIcon size={48} className="text-slate-300 mb-4" />
+        <p className="text-lg font-medium text-slate-700">Utilization Charts</p>
         <p className="text-sm mt-2">
           Run an optimization to see utilization trends across different adjuster counts.
         </p>
@@ -80,25 +82,32 @@ export default function UtilizationCharts({ tradeoffCurve = [], optimumCount = n
   return (
     <div className="space-y-6">
       {/* Machine Utilization Chart */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          🏭 Machine Utilization vs. Number of Adjusters
-        </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+          <Activity className="text-emerald-600" size={20} />
+          <h3 className="text-lg font-semibold text-slate-800">
+            Machine Utilization vs. Number of Adjusters
+          </h3>
+        </div>
         <ResponsiveContainer width="100%" height={320}>
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
             <XAxis
               dataKey="adjuster_count"
-              label={{ value: 'Number of Adjusters', position: 'insideBottomRight', offset: -10 }}
-              tick={{ fontSize: 12 }}
+              label={{ value: 'Number of Adjusters', position: 'insideBottomRight', offset: -10, fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickLine={{ stroke: '#cbd5e1' }}
             />
             <YAxis
               domain={[0, 100]}
-              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft' }}
-              tick={{ fontSize: 12 }}
+              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft', fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickLine={{ stroke: '#cbd5e1' }}
             />
-            <Tooltip content={<ChartTooltip />} />
-            <Legend />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
             {optimumCount && (
               <ReferenceLine
                 x={optimumCount}
@@ -109,6 +118,7 @@ export default function UtilizationCharts({ tradeoffCurve = [], optimumCount = n
                   position: 'top',
                   fill: CHART_COLORS.optimumLine,
                   fontSize: 12,
+                  fontWeight: 600
                 }}
               />
             )}
@@ -117,34 +127,41 @@ export default function UtilizationCharts({ tradeoffCurve = [], optimumCount = n
               dataKey="machine_utilization"
               name="Machine Utilization"
               stroke={CHART_COLORS.machineUtilization}
-              strokeWidth={2}
-              dot={{ r: 4, fill: CHART_COLORS.machineUtilization }}
-              activeDot={{ r: 6 }}
+              strokeWidth={3}
+              dot={{ r: 4, fill: CHART_COLORS.machineUtilization, strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       {/* Adjuster Utilization Chart */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          🔧 Adjuster Utilization vs. Number of Adjusters
-        </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+          <TrendingUp className="text-indigo-600" size={20} />
+          <h3 className="text-lg font-semibold text-slate-800">
+            Adjuster Utilization vs. Number of Adjusters
+          </h3>
+        </div>
         <ResponsiveContainer width="100%" height={320}>
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
             <XAxis
               dataKey="adjuster_count"
-              label={{ value: 'Number of Adjusters', position: 'insideBottomRight', offset: -10 }}
-              tick={{ fontSize: 12 }}
+              label={{ value: 'Number of Adjusters', position: 'insideBottomRight', offset: -10, fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickLine={{ stroke: '#cbd5e1' }}
             />
             <YAxis
               domain={[0, 100]}
-              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft' }}
-              tick={{ fontSize: 12 }}
+              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft', fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickLine={{ stroke: '#cbd5e1' }}
             />
-            <Tooltip content={<ChartTooltip />} />
-            <Legend />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
             {optimumCount && (
               <ReferenceLine
                 x={optimumCount}
@@ -155,6 +172,7 @@ export default function UtilizationCharts({ tradeoffCurve = [], optimumCount = n
                   position: 'top',
                   fill: CHART_COLORS.optimumLine,
                   fontSize: 12,
+                  fontWeight: 600
                 }}
               />
             )}
@@ -163,34 +181,41 @@ export default function UtilizationCharts({ tradeoffCurve = [], optimumCount = n
               dataKey="adjuster_utilization"
               name="Adjuster Utilization"
               stroke={CHART_COLORS.adjusterUtilization}
-              strokeWidth={2}
-              dot={{ r: 4, fill: CHART_COLORS.adjusterUtilization }}
-              activeDot={{ r: 6 }}
+              strokeWidth={3}
+              dot={{ r: 4, fill: CHART_COLORS.adjusterUtilization, strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       {/* Combined Overview Chart */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          📈 Combined Utilization Tradeoff
-        </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+          <LineChartIcon className="text-slate-800" size={20} />
+          <h3 className="text-lg font-semibold text-slate-800">
+            Combined Utilization Tradeoff
+          </h3>
+        </div>
         <ResponsiveContainer width="100%" height={360}>
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
             <XAxis
               dataKey="adjuster_count"
-              label={{ value: 'Number of Adjusters', position: 'insideBottomRight', offset: -10 }}
-              tick={{ fontSize: 12 }}
+              label={{ value: 'Number of Adjusters', position: 'insideBottomRight', offset: -10, fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickLine={{ stroke: '#cbd5e1' }}
             />
             <YAxis
               domain={[0, 100]}
-              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft' }}
-              tick={{ fontSize: 12 }}
+              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft', fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickLine={{ stroke: '#cbd5e1' }}
             />
-            <Tooltip content={<ChartTooltip />} />
-            <Legend />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
             {optimumCount && (
               <ReferenceLine
                 x={optimumCount}
@@ -201,6 +226,7 @@ export default function UtilizationCharts({ tradeoffCurve = [], optimumCount = n
                   position: 'top',
                   fill: CHART_COLORS.optimumLine,
                   fontSize: 12,
+                  fontWeight: 600
                 }}
               />
             )}
@@ -209,18 +235,18 @@ export default function UtilizationCharts({ tradeoffCurve = [], optimumCount = n
               dataKey="machine_utilization"
               name="Machine Utilization"
               stroke={CHART_COLORS.machineUtilization}
-              strokeWidth={2}
-              dot={{ r: 4, fill: CHART_COLORS.machineUtilization }}
-              activeDot={{ r: 6 }}
+              strokeWidth={3}
+              dot={{ r: 4, fill: CHART_COLORS.machineUtilization, strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
             />
             <Line
               type="monotone"
               dataKey="adjuster_utilization"
               name="Adjuster Utilization"
               stroke={CHART_COLORS.adjusterUtilization}
-              strokeWidth={2}
-              dot={{ r: 4, fill: CHART_COLORS.adjusterUtilization }}
-              activeDot={{ r: 6 }}
+              strokeWidth={3}
+              dot={{ r: 4, fill: CHART_COLORS.adjusterUtilization, strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
             />
           </LineChart>
         </ResponsiveContainer>
