@@ -1,11 +1,12 @@
 """
-FactoryServSim — FastAPI Application Entry Point.
+FactoryServSim -- FastAPI Application Entry Point.
 
 Configures and launches the FastAPI application with:
 - CORS middleware for frontend communication
-- All API routers (simulation, optimizer, streaming)
+- All API routers (simulation, optimizer, streaming, auth, factory)
 - Health check endpoint
 - Custom error handlers
+- SQLite database initialization
 - Swagger/OpenAPI documentation at /docs
 
 Usage:
@@ -20,7 +21,14 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import simulation_router, optimizer_router, websocket_router
+from app.api import (
+    simulation_router,
+    optimizer_router,
+    websocket_router,
+    auth_router,
+    factory_router,
+)
+from app.database import init_db
 
 # ---------------------------------------------------------------------------
 # Logging Configuration
@@ -55,6 +63,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown logic."""
     # --- Startup ---
     logger.info("FactoryServSim API starting up...")
+
+    # Initialize the database (create tables if they don't exist)
+    init_db()
+    logger.info("Database initialized (SQLite)")
+
     logger.info("Swagger docs available at: http://localhost:8000/docs")
     logger.info("ReDoc available at: http://localhost:8000/redoc")
 
@@ -87,9 +100,12 @@ app = FastAPI(
     description=(
         "Factory Machine-Adjuster Utilization Simulator API.\n\n"
         "A discrete-event simulation platform to evaluate machine/adjuster "
-        "utilization and calculate the optimum number of factory adjusters."
+        "utilization and calculate the optimum number of factory adjusters.\n\n"
+        "**Authentication:** Register at `/api/auth/register`, login at "
+        "`/api/auth/login` to get a JWT token. Use it as `Bearer <token>` "
+        "in the Authorization header for protected endpoints."
     ),
-    version="1.0.0",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
@@ -139,6 +155,8 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
 # Routers
 # ---------------------------------------------------------------------------
 
+app.include_router(auth_router)
+app.include_router(factory_router)
 app.include_router(simulation_router)
 app.include_router(optimizer_router)
 app.include_router(websocket_router)
@@ -158,5 +176,5 @@ async def health_check() -> dict:
     return {
         "status": "ok",
         "service": "FactoryServSim API",
-        "version": "1.0.0",
+        "version": "2.0.0",
     }

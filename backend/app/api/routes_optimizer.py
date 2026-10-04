@@ -125,9 +125,39 @@ async def optimize_staffing(
     Simulates across different adjuster counts and calculates the 'elbow point'
     where machine downtime cost balances adjuster idle time.
 
+    Validates adjuster business rules:
+    - Adjuster names must be unique
+    - No two adjusters can have the exact same expertise set
+
     Integration: Delegates to Person 2's optimizer when available,
     otherwise returns intelligent mock tradeoff data.
     """
+    # --- Adjuster Validation ---
+    # Rule 1: No duplicate adjuster names
+    seen_names = set()
+    for adj in payload.adjusters:
+        if adj.name.lower() in seen_names:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Duplicate adjuster name: '{adj.name}'. Each adjuster must have a unique name.",
+            )
+        seen_names.add(adj.name.lower())
+
+    # Rule 2: No two adjusters can have the exact same expertise set
+    seen_expertise = []
+    for adj in payload.adjusters:
+        expertise_set = frozenset(e.lower() for e in adj.expertise)
+        if expertise_set in seen_expertise:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Adjuster '{adj.name}' has the same expertise set "
+                    f"{sorted(adj.expertise)} as another adjuster. "
+                    f"No two adjusters can share the exact same expertise combination."
+                ),
+            )
+        seen_expertise.append(expertise_set)
+
     logger.info(
         "Optimization requested: sim_time=%d, categories=%d, adjusters=%d",
         payload.simulation_time,
