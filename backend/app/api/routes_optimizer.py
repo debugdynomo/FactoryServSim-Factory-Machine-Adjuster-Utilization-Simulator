@@ -128,11 +128,48 @@ def _generate_mock_optimization_result(
             per_category[cat.name] = count
             allocated += count
 
+    # Calculate per-adjuster distribution across the provided adjuster types/profiles
+    per_adjuster = {}
+    if payload.adjusters:
+        num_profiles = len(payload.adjusters)
+        # Compute how many machines each adjuster profile is qualified to service
+        profile_workloads = {}
+        for adj in payload.adjusters:
+            workload = sum(
+                (cat.count / cat.mttf)
+                for cat in payload.machine_categories
+                if cat.name in adj.expertise
+            )
+            profile_workloads[adj.name] = max(workload, 0.1)
+
+        total_workload = sum(profile_workloads.values())
+        adj_allocated = 0
+        sorted_profiles = sorted(
+            payload.adjusters,
+            key=lambda a: profile_workloads[a.name],
+            reverse=True,
+        )
+
+        for j, adj in enumerate(sorted_profiles):
+            if j == num_profiles - 1:
+                # Last adjuster profile gets the exact remainder to ensure sum equals optimum_count
+                remainder = max(1, optimum_count - adj_allocated)
+                per_adjuster[adj.name] = remainder
+            else:
+                share = profile_workloads[adj.name] / total_workload
+                alloc = max(1, round(optimum_count * share))
+                # Don't exceed total minus remaining slots
+                max_allowed = optimum_count - adj_allocated - (num_profiles - 1 - j)
+                alloc = min(alloc, max(1, max_allowed))
+                per_adjuster[adj.name] = alloc
+                adj_allocated += alloc
+
     return OptimizationResultOutput(
         optimum_adjuster_count=optimum_count,
         tradeoff_curve=tradeoff_curve,
         recommendation_reason=reason,
         per_category_adjusters=per_category,
+        per_adjuster_counts=per_adjuster if per_adjuster else None,
     )
 
 
@@ -195,7 +232,15 @@ async def optimize_staffing(
                 "Optimization completed: optimum=%d adjusters",
                 result.optimum_adjuster_count,
             )
-            return result
+            # If real engine result doesn't have per-category or per-adjuster breakdown, generate it
+            mock_supplement = _generate_mock_optimization_result(payload)
+            return OptimizationResultOutput(
+                optimum_adjuster_count=result.optimum_adjuster_count,
+                tradeoff_curve=result.tradeoff_curve,
+                recommendation_reason=result.recommendation_reason,
+                per_category_adjusters=getattr(result, "per_category_adjusters", None) or mock_supplement.per_category_adjusters,
+                per_adjuster_counts=getattr(result, "per_adjuster_counts", None) or mock_supplement.per_adjuster_counts,
+            )
         except Exception as e:
             logger.error("Optimizer engine error: %s", str(e))
             raise HTTPException(

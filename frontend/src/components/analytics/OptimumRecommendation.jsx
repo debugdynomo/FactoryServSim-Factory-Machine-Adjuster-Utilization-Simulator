@@ -210,6 +210,54 @@ export default function OptimumRecommendation({ optimizationResults }) {
         </div>
       )}
 
+      {/* Per-Adjuster Staffing Breakdown */}
+      {optimizationResults?.per_adjuster_counts && (
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">
+            👷 Required Adjusters by Profile
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Exact quantity of each adjuster role required to achieve the optimal total of {optimumCount} adjusters.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(optimizationResults.per_adjuster_counts).map(
+              ([adjusterName, count]) => (
+                <div
+                  key={adjusterName}
+                  className="flex items-center justify-between rounded-xl border-2 border-indigo-100 bg-indigo-50/50 p-4 shadow-sm"
+                >
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
+                      Role Profile
+                    </span>
+                    <p className="mt-1 text-base font-bold text-slate-900">
+                      {adjusterName}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      Hire / Assign:{' '}
+                      <span className="font-semibold text-indigo-700">
+                        {count} required
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white font-extrabold text-xl shadow-md">
+                    {count}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-lg bg-indigo-50 border border-indigo-200 p-3">
+            <span className="text-xs text-indigo-800 font-medium">
+              💡 Staffing Recipe: {Object.entries(optimizationResults.per_adjuster_counts).map(([name, count]) => `${count}x ${name}`).join(' + ')}
+            </span>
+            <span className="text-indigo-900 font-bold text-sm">
+              Total: {optimumCount}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Efficiency Tradeoff Area Chart */}
       {efficiencyData.length > 0 && (
         <div className="bg-white rounded-xl shadow-md p-6">

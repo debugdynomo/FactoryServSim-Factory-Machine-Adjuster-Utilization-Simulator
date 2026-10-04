@@ -110,5 +110,9 @@ export function getMockOptimizationResults() {
       Drilling: 1,
       Soldering: 1,
     },
+    per_adjuster_counts: {
+      'Adjuster 1': 2,
+      'Adjuster 2': 4,
+    },
   };
 }

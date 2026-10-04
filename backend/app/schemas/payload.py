@@ -323,6 +323,10 @@ class OptimizationResultOutput(BaseModel):
         default=None,
         description="Recommended number of adjusters per machine category (e.g. {'Lathe': 3, 'Drilling': 2})",
     )
+    per_adjuster_counts: Optional[dict] = Field(
+        default=None,
+        description="Recommended staffing count for each adjuster profile (e.g. {'Adjuster 1': 2, 'Adjuster 2': 4})",
+    )
 
     model_config = {
         "json_schema_extra": {
