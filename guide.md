@@ -65,13 +65,13 @@ FactoryServSim-Factory-Machine-Adjuster-Utilization-Simulator/
 │   │   └── default_factory.json       # Benchmark factory profiles
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── api/                       # 🟣 PERSON 3 (Routes & Controllers)
+│   │   ├── api/                       # 🟣 Purna - Person 3 (Routes & Controllers)
 │   │   │   ├── __init__.py
 │   │   │   ├── routes_simulation.py
 │   │   │   ├── routes_optimizer.py
 │   │   │   └── websocket_stream.py
 │   │   │
-│   │   ├── core/                      # 🟢 PERSON 1 (Core DES Engine & Queue)
+│   │   ├── core/                      # 🟢 Akshara - Person 1 (Core DES Engine & Queue)
 │   │   │   ├── __init__.py
 │   │   │   ├── models.py              # Machine, Adjuster, Factory dataclasses
 │   │   │   ├── event.py               # Event priority queue
@@ -79,21 +79,21 @@ FactoryServSim-Factory-Machine-Adjuster-Utilization-Simulator/
 │   │   │   ├── queue_manager.py       # Single-Queue & Service Manager
 │   │   │   └── simulator.py           # DES execution loop
 │   │   │
-│   │   ├── services/                  # 🔵 PERSON 2 (Math, Models & Optimizer)
+│   │   ├── services/                  # 🔵 Kiran - Person 2 (Math, Models & Optimizer)
 │   │   │   ├── __init__.py
 │   │   │   ├── failure_model.py       # Uniform MTTF failure generator
 │   │   │   ├── repair_model.py        # Repair duration & transitions
 │   │   │   ├── optimizer.py           # Parameter search for optimal adjusters
 │   │   │   └── monte_carlo.py         # Multi-run aggregator
 │   │   │
-│   │   └── schemas/                   # 🟣 PERSON 3 / Shared
+│   │   └── schemas/                   # 🟣 Purna - Person 3 / Shared
 │   │       ├── __init__.py
 │   │       └── payload.py             # Pydantic schemas (Config, Results)
 │   │
 │   └── tests/                         # Backend Unit & Integration Tests
-│       ├── test_models_engine.py      # Person 1 tests
-│       ├── test_optimizer.py          # Person 2 tests
-│       └── test_api.py                # Person 3 tests
+│       ├── test_models_engine.py      # Akshara (Person 1) tests
+│       ├── test_optimizer.py          # Kiran (Person 2) tests
+│       └── test_api.py                # Purna (Person 3) tests
 │
 └── frontend/                          # ⚛️ REACT + VITE + TAILWIND FRONTEND
     ├── package.json
@@ -107,19 +107,19 @@ FactoryServSim-Factory-Machine-Adjuster-Utilization-Simulator/
         │   └── simulationApi.js
         │
         ├── components/
-        │   ├── configurator/          # 🟠 PERSON 4 (Factory Setup & Presets)
+        │   ├── configurator/          # 🟠 Prathik - Person 4 (Factory Setup & Presets)
         │   │   ├── CategoryForm.jsx
         │   │   ├── AdjusterForm.jsx
         │   │   ├── PresetSelector.jsx
         │   │   └── ConfigSummary.jsx
         │   │
-        │   ├── floor_visualizer/      # 🟡 PERSON 5 (Interactive Queue & Floor)
+        │   ├── floor_visualizer/      # 🟡 Sravan - Person 5 (Interactive Queue & Floor)
         │   │   ├── FactoryFloorGrid.jsx
         │   │   ├── MachineCard.jsx
         │   │   ├── SingleQueueBar.jsx # Visual invariant indicator
         │   │   └── PlaybackControls.jsx
         │   │
-        │   └── analytics/             # 🔴 PERSON 6 (Charts, Dashboards & Report)
+        │   └── analytics/             # 🔴 Vishnu - Person 6 (Charts, Dashboards & Report)
         │       ├── UtilizationCharts.jsx
         │       ├── CategoryBreakdown.jsx
         │       ├── OptimumRecommendation.jsx
@@ -136,7 +136,7 @@ The project is structured into **3 Backend Roles** and **3 Frontend Roles**, gua
 
 ---
 
-### 🟢 PERSON 1 — Core Simulation Engine & Single-Queue Architecture (Backend)
+### 🟢 Akshara — Core Simulation Engine & Single-Queue Architecture (Backend / Person 1)
 
 - **Module:** `backend/app/core/`
 - **Git Branch:** `feature/backend-engine`
@@ -152,7 +152,7 @@ The project is structured into **3 Backend Roles** and **3 Frontend Roles**, gua
 
 ---
 
-### 🔵 PERSON 2 — Stochastic Modeling, Failure Dynamics & Staffing Optimizer (Backend)
+### 🔵 Kiran — Stochastic Modeling, Failure Dynamics & Staffing Optimizer (Backend / Person 2)
 
 - **Module:** `backend/app/services/`
 - **Git Branch:** `feature/backend-optimizer`
@@ -169,7 +169,7 @@ The project is structured into **3 Backend Roles** and **3 Frontend Roles**, gua
 
 ---
 
-### 🟣 PERSON 3 — FastAPI REST Services, Streaming & Data Validation (Backend)
+### 🟣 Purna — FastAPI REST Services, Streaming & Data Validation (Backend / Person 3)
 
 - **Module:** `backend/app/api/` & `backend/app/schemas/`
 - **Git Branch:** `feature/backend-api`
@@ -185,7 +185,7 @@ The project is structured into **3 Backend Roles** and **3 Frontend Roles**, gua
 
 ---
 
-### 🟠 PERSON 4 — UI Shell, Factory Configurator & Preset Manager (Frontend)
+### 🟠 Prathik — UI Shell, Factory Configurator & Preset Manager (Frontend / Person 4)
 
 - **Module:** `frontend/src/components/configurator/`
 - **Git Branch:** `feature/frontend-config`
@@ -196,12 +196,12 @@ The project is structured into **3 Backend Roles** and **3 Frontend Roles**, gua
      - Add and manage adjusters with multi-select tags for category expertise.
      - Client-side validation (non-negative counts, positive MTTF).
   3. **Preset Management (`PresetSelector.jsx`):** Quick-load templates (e.g., "Automotive Plant: 200 Lathes, 50 Turning, 80 Drilling, 30 Soldering").
-  4. **State Management & API Integration:** Sync form state and trigger simulation payloads to Person 3's backend.
+  4. **State Management & API Integration:** Sync form state and trigger simulation payloads to Purna's (Person 3) backend.
 - **Your Tests:** Component rendering, input validation, and preset selection logic.
 
 ---
 
-### 🟡 PERSON 5 — Interactive Factory Floor & Single-Queue Visualizer (Frontend)
+### 🟡 Sravan — Interactive Factory Floor & Single-Queue Visualizer (Frontend / Person 5)
 
 - **Module:** `frontend/src/components/floor_visualizer/`
 - **Git Branch:** `feature/frontend-visualizer`
@@ -216,12 +216,12 @@ The project is structured into **3 Backend Roles** and **3 Frontend Roles**, gua
      - Animate either the "Inoperative Machines Queue" or "Idle Adjusters Queue".
   3. **Playback & Simulation Controls (`PlaybackControls.jsx`):**
      - Play, Pause, Speed Slider ($1\times, 5\times, 20\times$), Step-by-Step button, and Reset.
-     - Bind to WebSocket / SSE stream from Person 3 or play back recorded simulation frames.
+     - Bind to WebSocket / SSE stream from Purna (Person 3) or play back recorded simulation frames.
 - **Your Tests:** Queue animation state checks, playback control state handlers.
 
 ---
 
-### 🔴 PERSON 6 — Analytics Dashboard & Staffing Recommendation Engine (Frontend)
+### 🔴 Vishnu — Analytics Dashboard & Staffing Recommendation Engine (Frontend / Person 6)
 
 - **Module:** `frontend/src/components/analytics/`
 - **Git Branch:** `feature/frontend-analytics`
@@ -338,12 +338,12 @@ We follow the standard Git Flow model with an integration branch (`dev`):
 main (Production-ready releases only)
  └── dev (Integration branch — all features merge here via PR)
       │
-      ├── feature/backend-engine       (Person 1)
-      ├── feature/backend-optimizer    (Person 2)
-      ├── feature/backend-api          (Person 3)
-      ├── feature/frontend-config      (Person 4)
-      ├── feature/frontend-visualizer  (Person 5)
-      └── feature/frontend-analytics   (Person 6)
+      ├── feature/backend-engine       (Akshara - Person 1)
+      ├── feature/backend-optimizer    (Kiran - Person 2)
+      ├── feature/backend-api          (Purna - Person 3)
+      ├── feature/frontend-config      (Prathik - Person 4)
+      ├── feature/frontend-visualizer  (Sravan - Person 5)
+      └── feature/frontend-analytics   (Vishnu - Person 6)
 ```
 
 ### Golden Rules:
@@ -383,27 +383,27 @@ git pull origin dev
 Execute only the command corresponding to your assigned role:
 
 ```bash
-# Person 1:
+# Akshara (Person 1):
 git checkout -b feature/backend-engine
 git push -u origin feature/backend-engine
 
-# Person 2:
+# Kiran (Person 2):
 git checkout -b feature/backend-optimizer
 git push -u origin feature/backend-optimizer
 
-# Person 3:
+# Purna (Person 3):
 git checkout -b feature/backend-api
 git push -u origin feature/backend-api
 
-# Person 4:
+# Prathik (Person 4):
 git checkout -b feature/frontend-config
 git push -u origin feature/frontend-config
 
-# Person 5:
+# Sravan (Person 5):
 git checkout -b feature/frontend-visualizer
 git push -u origin feature/frontend-visualizer
 
-# Person 6:
+# Vishnu (Person 6):
 git checkout -b feature/frontend-analytics
 git push -u origin feature/frontend-analytics
 ```
@@ -534,21 +534,21 @@ npm run dev
 
 ### Phase 1: Foundation & Contracts (Days 1–4)
 
-- **Person 1:** Build core dataclasses (`Machine`, `Adjuster`) and min-heap DES event loop.
-- **Person 2:** Implement uniform MTTF distribution logic and repair timing.
-- **Person 3:** Scaffold FastAPI application, CORS setup, and Pydantic request/response schemas.
-- **Person 4:** Initialize Vite + Tailwind project; create layout shell and category input forms.
-- **Person 5:** Build machine card components and visual factory grid layout with mock data.
-- **Person 6:** Build analytics dashboard skeleton with mock utilization line and bar charts.
+- **Akshara (Person 1):** Build core dataclasses (`Machine`, `Adjuster`) and min-heap DES event loop.
+- **Kiran (Person 2):** Implement uniform MTTF distribution logic and repair timing.
+- **Purna (Person 3):** Scaffold FastAPI application, CORS setup, and Pydantic request/response schemas.
+- **Prathik (Person 4):** Initialize Vite + Tailwind project; create layout shell and category input forms.
+- **Sravan (Person 5):** Build machine card components and visual factory grid layout with mock data.
+- **Vishnu (Person 6):** Build analytics dashboard skeleton with mock utilization line and bar charts.
 
 ### Phase 2: Core Logic & Wiring (Days 5–9)
 
-- **Person 1:** Implement `queue_manager.py` (enforce single-queue invariant and expertise matching).
-- **Person 2:** Build multi-run simulator and automated adjuster optimizer sweep.
-- **Person 3:** Connect simulation engine to `POST /api/simulation/run` and `POST /api/simulation/optimize`.
-- **Person 4:** Hook Configurator form submission to backend API.
-- **Person 5:** Implement single-queue visualizer and connect playback controls.
-- **Person 6:** Bind backend calculation outputs to interactive Recharts graphs.
+- **Akshara (Person 1):** Implement `queue_manager.py` (enforce single-queue invariant and expertise matching).
+- **Kiran (Person 2):** Build multi-run simulator and automated adjuster optimizer sweep.
+- **Purna (Person 3):** Connect simulation engine to `POST /api/simulation/run` and `POST /api/simulation/optimize`.
+- **Prathik (Person 4):** Hook Configurator form submission to backend API.
+- **Sravan (Person 5):** Implement single-queue visualizer and connect playback controls.
+- **Vishnu (Person 6):** Bind backend calculation outputs to interactive Recharts graphs.
 
 ### Phase 3: Live Integration & Optimization (Days 10–13)
 
