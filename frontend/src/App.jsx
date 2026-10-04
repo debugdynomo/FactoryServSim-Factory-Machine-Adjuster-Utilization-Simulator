@@ -38,21 +38,41 @@ export default function App() {
     setCurrentConfig(null);
   };
 
+  const [activeTab, setActiveTab] = useState('config');
+
   // Allow loading a historical run from the MongoDB history back onto dashboard
   const handleLoadHistoricalRun = (historicalItem) => {
     if (historicalItem.results) {
       if (historicalItem.report_type === 'optimization') {
         setOptimizationResults(historicalItem.results.optimization || historicalItem.results);
+        setSimulationResults(null);
       } else {
         setSimulationResults(historicalItem.results);
+        setOptimizationResults(null);
       }
+      setActiveTab('analytics'); // Jump to analytics when loading a past run
     }
+  };
+
+  // Switch to analytics automatically after a new run
+  const handleSimulationComplete = (results) => {
+    setSimulationResults(results);
+    setOptimizationResults(null);
+    setActiveTab('analytics');
+  };
+
+  const handleOptimizationComplete = (results) => {
+    setOptimizationResults(results);
+    setSimulationResults(null);
+    setActiveTab('analytics');
   };
 
   // Show auth page if not logged in
   if (!isLoggedIn) {
     return <AuthPage onLoginSuccess={handleLoginSuccess} />;
   }
+
+  const hasResults = !!simulationResults || !!optimizationResults;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -82,39 +102,107 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-8">
-        {/* Person 4: Factory Configurator */}
-        <ConfiguratorSection
-          onSimulationComplete={setSimulationResults}
-          onOptimizationComplete={setOptimizationResults}
-          onConfigChange={setCurrentConfig}
-        />
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+          <button
+            onClick={() => setActiveTab('config')}
+            className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition-colors ${
+              activeTab === 'config'
+                ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            1. Setup Configuration
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('analytics')}
+            disabled={!hasResults}
+            className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition-colors ${
+              !hasResults 
+                ? 'opacity-50 cursor-not-allowed border-transparent text-slate-400' 
+                : activeTab === 'analytics'
+                  ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            2. Analytics & Results
+          </button>
 
-        {/* Manager History & Save Report Panel (MongoDB) */}
-        <ManagerHistoryPanel
-          currentConfig={currentConfig}
-          simulationResults={simulationResults}
-          optimizationResults={optimizationResults}
-          onLoadHistoricalRun={handleLoadHistoricalRun}
-        />
+          <button
+            onClick={() => setActiveTab('visualizer')}
+            disabled={!simulationResults}
+            className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition-colors ${
+              !simulationResults 
+                ? 'opacity-50 cursor-not-allowed border-transparent text-slate-400' 
+                : activeTab === 'visualizer'
+                  ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            3. Live Floor Visualizer
+          </button>
 
-        {/* Person 5: Interactive Factory Floor & Single-Queue Visualizer */}
-        <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">
-            🏭 Live Factory Floor & Single-Queue State
-          </h2>
-          <SingleQueueBar
-            machineQueueCount={simulationResults ? (simulationResults.summary?.overall_machine_utilization_pct < 95 ? Math.floor((100 - simulationResults.summary.overall_machine_utilization_pct)/5) + 1 : 0) : 0}
-            idleAdjusterCount={simulationResults ? (simulationResults.summary?.overall_machine_utilization_pct >= 95 ? Math.floor(100 - simulationResults.summary.overall_adjuster_utilization_pct)/10 + 1 : 0) : 0}
-          />
-          <FactoryFloorGrid machines={simulationResults?.machines || (simulationResults?.category_metrics ? simulationResults.category_metrics.flatMap((cat, i) => Array.from({ length: Math.min(12, Math.max(3, Math.floor(cat.total_failures / 100))) }).map((_, j) => { const r = Math.random(); return {id: `${i}-${j}`, name: `${cat.category} Unit ${j+1}`, category: cat.category, state: r > 0.9 ? 'UNDER_REPAIR' : (r > 0.7 ? 'WAITING_FOR_REPAIR' : 'RUNNING')} })) : [])} />
-        </section>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition-colors ${
+              activeTab === 'history'
+                ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            4. Report Manager
+          </button>
+        </div>
 
-        {/* Person 6: Analytics Dashboard & Staffing Recommendations */}
-        <AnalyticsDashboard
-          simulationResults={simulationResults}
-          optimizationResults={optimizationResults}
-        />
+        {/* Tab Content */}
+        <div className="min-h-[600px]">
+          {activeTab === 'config' && (
+            <ConfiguratorSection
+              onSimulationComplete={handleSimulationComplete}
+              onOptimizationComplete={handleOptimizationComplete}
+              onConfigChange={setCurrentConfig}
+            />
+          )}
+
+          {activeTab === 'analytics' && (
+            <AnalyticsDashboard
+              simulationResults={simulationResults}
+              optimizationResults={optimizationResults}
+            />
+          )}
+
+          {activeTab === 'visualizer' && (
+            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-bold text-slate-900">
+                  🏭 Live Factory Floor & Single-Queue State
+                </h2>
+                <button 
+                  onClick={() => setActiveTab('analytics')}
+                  className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  ← Back to Analytics
+                </button>
+              </div>
+              <SingleQueueBar
+                machineQueueCount={simulationResults ? (simulationResults.summary?.overall_machine_utilization_pct < 95 ? Math.floor((100 - simulationResults.summary.overall_machine_utilization_pct)/5) + 1 : 0) : 0}
+                idleAdjusterCount={simulationResults ? (simulationResults.summary?.overall_machine_utilization_pct >= 95 ? Math.floor(100 - simulationResults.summary.overall_adjuster_utilization_pct)/10 + 1 : 0) : 0}
+              />
+              <FactoryFloorGrid machines={simulationResults?.machines || (simulationResults?.category_metrics ? simulationResults.category_metrics.flatMap((cat, i) => Array.from({ length: Math.min(12, Math.max(3, Math.floor(cat.total_failures / 100))) }).map((_, j) => { const r = Math.random(); return {id: `${i}-${j}`, name: `${cat.category} Unit ${j+1}`, category: cat.category, state: r > 0.9 ? 'UNDER_REPAIR' : (r > 0.7 ? 'WAITING_FOR_REPAIR' : 'RUNNING')} })) : [])} />
+            </section>
+          )}
+
+          {activeTab === 'history' && (
+            <ManagerHistoryPanel
+              currentConfig={currentConfig}
+              simulationResults={simulationResults}
+              optimizationResults={optimizationResults}
+              onLoadHistoricalRun={handleLoadHistoricalRun}
+            />
+          )}
+        </div>
       </main>
     </div>
   );
