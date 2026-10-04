@@ -164,7 +164,15 @@ export default function ConfiguratorSection({
       {/* Wizard Steps */}
       <div className="min-h-[400px]">
         {wizardStep === 1 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            {/* Provide presets right at the start to save time */}
+            <div className="bg-slate-50 border border-indigo-100 p-4 rounded-xl">
+              <h2 className="text-sm font-semibold text-indigo-900 mb-2 flex items-center gap-2">
+                ⚡ Quick Start: Choose a Preset
+              </h2>
+              <PresetSelector presets={presets} onSelect={applyPreset} />
+            </div>
+            
             <CategoryForm categories={categories} onChange={setCategories} />
           </div>
         )}
@@ -177,7 +185,6 @@ export default function ConfiguratorSection({
 
         {wizardStep === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <PresetSelector presets={presets} onSelect={applyPreset} />
 
             <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <label
