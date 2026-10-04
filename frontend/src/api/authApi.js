@@ -140,3 +140,11 @@ export async function listReports(factoryId) {
   if (!response.ok) throw new Error('Failed to list reports');
   return await response.json();
 }
+
+export async function getManagerHistory() {
+  const response = await fetch(`${API_BASE}/api/factories/history`, {
+    headers: { ...authHeaders() },
+  });
+  if (!response.ok) throw new Error('Failed to fetch simulation history');
+  return await response.json();
+}

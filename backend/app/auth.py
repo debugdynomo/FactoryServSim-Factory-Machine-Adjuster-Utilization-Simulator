@@ -102,17 +102,13 @@ def decode_access_token(token: str) -> dict:
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-) -> User:
+) -> dict:
     """
     FastAPI dependency that extracts and validates the current user
     from the JWT Bearer token in the Authorization header.
-
-    Usage:
-        @router.get("/protected")
-        async def protected_route(user: User = Depends(get_current_user)):
-            return {"msg": f"Hello, {user.manager_name}"}
     """
+    from app.repository import find_user_by_email
+
     payload = decode_access_token(token)
     user_email: str = payload.get("sub")
 
@@ -123,7 +119,7 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(User).filter(User.email == user_email).first()
+    user = find_user_by_email(user_email)
 
     if user is None:
         raise HTTPException(

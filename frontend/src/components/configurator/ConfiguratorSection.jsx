@@ -18,6 +18,7 @@ const DEFAULT_CONFIG = {
 export default function ConfiguratorSection({
   onSimulationComplete,
   onOptimizationComplete,
+  onConfigChange,
 }) {
   const [simulationTime, setSimulationTime] = useState(
     DEFAULT_CONFIG.simulation_time,
@@ -27,6 +28,15 @@ export default function ConfiguratorSection({
   const [presets, setPresets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Keep parent in sync with config whenever it changes
+  useEffect(() => {
+    onConfigChange?.({
+      simulation_time: Number(simulationTime),
+      machine_categories: categories,
+      adjusters: adjusters,
+    });
+  }, [simulationTime, categories, adjusters, onConfigChange]);
 
   useEffect(() => {
     let mounted = true;
