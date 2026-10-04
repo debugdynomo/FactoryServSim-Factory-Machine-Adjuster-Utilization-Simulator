@@ -108,10 +108,31 @@ def _generate_mock_optimization_result(
             f"and adjuster utilization for this factory configuration."
         )
 
+    # Calculate per-category adjuster distribution
+    # Distribute optimum adjusters proportionally based on machine count * failure rate
+    total_weight = sum(cat.count / cat.mttf for cat in payload.machine_categories)
+    per_category = {}
+    allocated = 0
+    sorted_cats = sorted(
+        payload.machine_categories,
+        key=lambda c: c.count / c.mttf,
+        reverse=True,
+    )
+    for i, cat in enumerate(sorted_cats):
+        weight = (cat.count / cat.mttf) / total_weight if total_weight > 0 else 1.0 / len(sorted_cats)
+        if i == len(sorted_cats) - 1:
+            # Last category gets the remainder
+            per_category[cat.name] = max(1, optimum_count - allocated)
+        else:
+            count = max(1, round(optimum_count * weight))
+            per_category[cat.name] = count
+            allocated += count
+
     return OptimizationResultOutput(
         optimum_adjuster_count=optimum_count,
         tradeoff_curve=tradeoff_curve,
         recommendation_reason=reason,
+        per_category_adjusters=per_category,
     )
 
 

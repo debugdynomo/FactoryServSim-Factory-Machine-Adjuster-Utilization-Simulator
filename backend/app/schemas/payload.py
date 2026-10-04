@@ -319,6 +319,10 @@ class OptimizationResultOutput(BaseModel):
         min_length=1,
         description="Human-readable explanation for the recommendation",
     )
+    per_category_adjusters: Optional[dict] = Field(
+        default=None,
+        description="Recommended number of adjusters per machine category (e.g. {'Lathe': 3, 'Drilling': 2})",
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -335,6 +339,7 @@ class OptimizationResultOutput(BaseModel):
                         "6 adjusters provides 93.8% machine uptime. "
                         "Adding 2 more adjusters yields only +1.3% uptime at 64% worker utilization."
                     ),
+                    "per_category_adjusters": {"Lathe": 3, "Drilling": 2, "Soldering": 1},
                 }
             ]
         }
