@@ -136,58 +136,107 @@ export default function ConfiguratorSection({
     }
   };
 
+  const [wizardStep, setWizardStep] = useState(1);
+  const totalSteps = 3;
+
+  const handleNext = () => setWizardStep((prev) => Math.min(prev + 1, totalSteps));
+  const handlePrev = () => setWizardStep((prev) => Math.max(prev - 1, 1));
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">
-          Factory Configurator
+          Factory Configurator Wizard
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Configure machine categories and adjuster expertise before running
-          the simulation.
+          Step {wizardStep} of {totalSteps}: {wizardStep === 1 ? 'Configure Machines' : wizardStep === 2 ? 'Configure Adjusters' : 'Review & Run'}
         </p>
       </div>
 
-      <PresetSelector presets={presets} onSelect={applyPreset} />
+      {/* Progress Bar */}
+      <div className="w-full bg-slate-200 rounded-full h-2.5 mb-6">
+        <div 
+          className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
+          style={{ width: `${(wizardStep / totalSteps) * 100}%` }}
+        ></div>
+      </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <label
-          htmlFor="simulation-time"
-          className="mb-1 block text-sm font-medium text-slate-700"
+      {/* Wizard Steps */}
+      <div className="min-h-[400px]">
+        {wizardStep === 1 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <CategoryForm categories={categories} onChange={setCategories} />
+          </div>
+        )}
+
+        {wizardStep === 2 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <AdjusterForm adjusters={adjusters} categories={categories} onChange={setAdjusters} />
+          </div>
+        )}
+
+        {wizardStep === 3 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <PresetSelector presets={presets} onSelect={applyPreset} />
+
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <label
+                htmlFor="simulation-time"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
+                Simulation time (hours)
+              </label>
+              <input
+                id="simulation-time"
+                type="number"
+                min="1"
+                step="1"
+                value={simulationTime}
+                onChange={(event) => setSimulationTime(event.target.value)}
+                className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+            </section>
+
+            <ConfigSummary
+              simulationTime={simulationTime}
+              categories={categories}
+              adjusters={adjusters}
+              onSimulation={handleSimulation}
+              onOptimization={handleOptimization}
+              loading={loading}
+              error={error}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Wizard Navigation */}
+      <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+        <button
+          onClick={handlePrev}
+          disabled={wizardStep === 1}
+          className={`px-5 py-2 text-sm font-medium rounded-lg transition-colors ${
+            wizardStep === 1
+              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm'
+          }`}
         >
-          Simulation time
-        </label>
-        <input
-          id="simulation-time"
-          type="number"
-          min="1"
-          step="1"
-          value={simulationTime}
-          onChange={(event) => setSimulationTime(event.target.value)}
-          className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
-      </section>
+          ← Back
+        </button>
 
-      <CategoryForm
-        categories={categories}
-        onChange={setCategories}
-      />
-
-      <AdjusterForm
-        adjusters={adjusters}
-        categories={categories}
-        onChange={setAdjusters}
-      />
-
-      <ConfigSummary
-        simulationTime={simulationTime}
-        categories={categories}
-        adjusters={adjusters}
-        onSimulation={handleSimulation}
-        onOptimization={handleOptimization}
-        loading={loading}
-        error={error}
-      />
+        {wizardStep < totalSteps ? (
+          <button
+            onClick={handleNext}
+            className="px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2"
+          >
+            Next Step →
+          </button>
+        ) : (
+          <div className="text-sm text-slate-500 italic">
+            Ready to Run! Click a button above.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
