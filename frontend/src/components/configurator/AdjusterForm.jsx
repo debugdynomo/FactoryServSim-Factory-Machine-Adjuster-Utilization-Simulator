@@ -36,6 +36,28 @@ export default function AdjusterForm({
       return;
     }
 
+    // Rule 1: No duplicate adjuster names
+    const duplicateName = adjusters.find(
+      (adj) => adj.name.toLowerCase() === name.trim().toLowerCase()
+    );
+    if (duplicateName) {
+      setError(`Adjuster "${name.trim()}" already exists. Each adjuster must have a unique name.`);
+      return;
+    }
+
+    // Rule 2: No two adjusters can have the exact same expertise set
+    const newExpertiseSet = [...expertise].sort().join(',').toLowerCase();
+    const duplicateExpertise = adjusters.find((adj) => {
+      const existingSet = [...adj.expertise].sort().join(',').toLowerCase();
+      return existingSet === newExpertiseSet;
+    });
+    if (duplicateExpertise) {
+      setError(
+        `Adjuster "${duplicateExpertise.name}" already has the same expertise [${expertise.join(', ')}]. No two adjusters can share the exact same expertise combination.`
+      );
+      return;
+    }
+
     const nextId =
       adjusters.length > 0
         ? Math.max(...adjusters.map((adjuster) => Number(adjuster.id))) + 1
