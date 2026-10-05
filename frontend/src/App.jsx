@@ -37,8 +37,9 @@ export default function App() {
   const handleLoadHistoricalRun = (historicalItem) => {
     if (historicalItem.results) {
       if (historicalItem.report_type === 'optimization') {
+        // resultsToSave included ...simulationResults and optimization: optimizationResults
+        setSimulationResults(historicalItem.results);
         setOptimizationResults(historicalItem.results.optimization || historicalItem.results);
-        setSimulationResults(null);
       } else {
         setSimulationResults(historicalItem.results);
         setOptimizationResults(null);

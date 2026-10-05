@@ -19,17 +19,28 @@ export default function ConfiguratorSection({
   onAnalysisComplete,
   onConfigChange,
 }) {
-  const [simulationTime, setSimulationTime] = useState(
-    DEFAULT_CONFIG.simulation_time,
-  );
-  const [categories, setCategories] = useState([]);
-  const [adjusters, setAdjusters] = useState([]);
+  const [simulationTime, setSimulationTime] = useState(() => {
+    const saved = localStorage.getItem('factoryservsim_draft_time');
+    return saved ? Number(saved) : DEFAULT_CONFIG.simulation_time;
+  });
+  const [categories, setCategories] = useState(() => {
+    const saved = localStorage.getItem('factoryservsim_draft_categories');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [adjusters, setAdjusters] = useState(() => {
+    const saved = localStorage.getItem('factoryservsim_draft_adjusters');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [presets, setPresets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Keep parent in sync with config whenever it changes
+  // Keep parent in sync with config whenever it changes, and save to localStorage (like cookies)
   useEffect(() => {
+    localStorage.setItem('factoryservsim_draft_time', simulationTime.toString());
+    localStorage.setItem('factoryservsim_draft_categories', JSON.stringify(categories));
+    localStorage.setItem('factoryservsim_draft_adjusters', JSON.stringify(adjusters));
+
     onConfigChange?.({
       simulation_time: Number(simulationTime),
       machine_categories: categories,
