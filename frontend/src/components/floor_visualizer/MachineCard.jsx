@@ -12,6 +12,7 @@ export const MachineCard = ({ machine }) => {
 
   switch (machine.state) {
     case 'RUNNING':
+    case 'WORKING':
       bgClass = 'bg-green-50';
       borderClass = 'border-green-200';
       Icon = CheckCircle2;

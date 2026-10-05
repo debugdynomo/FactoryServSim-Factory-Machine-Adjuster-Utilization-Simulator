@@ -72,10 +72,22 @@ def _generate_mock_simulation_result(payload: FactoryConfigInput) -> SimulationR
     num_adjusters = len(payload.adjusters)
 
     # Generate plausible mock metrics based on input ratios
-    # More adjusters per machine -> higher machine utilization, lower adjuster utilization
-    ratio = num_adjusters / max(total_machines, 1)
-    machine_util = min(98.0, 50.0 + ratio * 5000)
-    adjuster_util = max(20.0, 99.0 - ratio * 1000)
+    # Queueing theory: offered load = sum(count * mean_repair_time / mttf)
+    rho = sum(cat.count * cat.mean_repair_time / cat.mttf for cat in payload.machine_categories)
+    avg_repair = sum(cat.count * cat.mean_repair_time for cat in payload.machine_categories) / max(total_machines, 1)
+    avg_mttf = sum(cat.count * cat.mttf for cat in payload.machine_categories) / max(total_machines, 1)
+
+    if num_adjusters >= rho and rho > 0:
+        excess = num_adjusters - rho
+        wait_factor = rho / (excess + rho) if (excess + rho) > 0 else 1.0
+        effective_downtime = avg_repair * (1 + wait_factor)
+        machine_util = min(99.5, (avg_mttf / (avg_mttf + effective_downtime)) * 100)
+    elif rho > 0:
+        machine_util = min(95.0, max(10.0, (num_adjusters / rho) * 80.0))
+    else:
+        machine_util = 99.5
+
+    adjuster_util = min(99.0, max(5.0, (rho / max(num_adjusters, 1)) * 100))
 
     category_metrics = []
     total_failures = 0
@@ -83,7 +95,7 @@ def _generate_mock_simulation_result(payload: FactoryConfigInput) -> SimulationR
         # Estimate failures: sim_time / mttf * count (approximate)
         est_failures = int(payload.simulation_time / cat.mttf * cat.count * 0.5)
         # Higher MTTF -> higher utilization
-        cat_util = min(99.0, 100.0 - (cat.mean_repair_time / cat.mttf) * 100)
+        cat_util = min(99.0, (cat.mttf / (cat.mttf + cat.mean_repair_time)) * 100)
         category_metrics.append(
             CategoryMetrics(
                 category=cat.name,
@@ -100,12 +112,18 @@ def _generate_mock_simulation_result(payload: FactoryConfigInput) -> SimulationR
             AdjusterMetrics(
                 id=adj.id,
                 name=adj.name,
-                busy_time_pct=round(adjuster_util + (adj.id % 3) * 0.5, 2),
+                busy_time_pct=round(min(99.0, adjuster_util + (adj.id % 3) * 0.5), 2),
                 repairs_completed=repairs_per_adjuster + (adj.id * 10),
             )
         )
 
-    avg_wait = max(0.1, (1.0 - ratio * 100) * 5) if ratio < 0.01 else 0.5
+    # Average wait time based on queue theory
+    if num_adjusters > rho and rho > 0:
+        avg_wait = round(avg_repair * rho / (num_adjusters - rho), 2)
+    elif rho > 0:
+        avg_wait = round(avg_repair * 5, 2)  # heavily understaffed
+    else:
+        avg_wait = 0.1
 
     return SimulationResultOutput(
         summary=SummaryMetrics(

@@ -41,24 +41,63 @@ def _generate_mock_optimization_result(
     payload: FactoryConfigInput,
 ) -> OptimizationResultOutput:
     """
-    Generate mock optimization results matching the guide.md contract.
-    Produces a plausible tradeoff curve based on input configuration.
+    Generate optimization results based on queueing theory.
+
+    The steady-state repair demand (offered load) is:
+        rho = sum( count_i * mean_repair_time_i / mttf_i )  for each category i
+
+    This gives the minimum number of adjusters needed to keep up with failures.
+    The optimum adds a small buffer so adjusters aren't pegged at 100% and
+    machines don't wait too long in the queue.
     """
+    import math
+
     total_machines = sum(cat.count for cat in payload.machine_categories)
 
-    # Generate a tradeoff curve: test adjuster counts from 1 to ~total_machines/20
-    max_adjusters = max(10, total_machines // 20)
-    step = max(1, max_adjusters // 6)
+    # Offered load: average number of concurrent repairs needed at steady state
+    rho = sum(
+        cat.count * cat.mean_repair_time / cat.mttf
+        for cat in payload.machine_categories
+    )
+
+    # Minimum adjusters to keep up (must be > rho for a stable queue)
+    min_adjusters = max(1, math.ceil(rho))
+
+    # Sweep from 1 to a reasonable upper bound
+    max_adjusters = max(min_adjusters + 6, min_adjusters * 3, 10)
+    max_adjusters = min(max_adjusters, total_machines)  # cap at total machines
 
     tradeoff_curve: List[TradeoffPoint] = []
     best_score = -1.0
-    optimum_count = 1
+    optimum_count = min_adjusters
 
-    for count in range(1, max_adjusters + 1, step):
-        # Simulate diminishing returns: more adjusters -> higher machine util, lower adjuster util
-        ratio = count / max(total_machines * 0.01, 1)
-        machine_util = min(99.0, 40.0 + 50.0 * (1.0 - 1.0 / (1.0 + ratio)))
-        adjuster_util = max(10.0, 99.0 - ratio * 30.0)
+    for count in range(1, max_adjusters + 1):
+        # Machine utilization: fraction of time machines are working
+        # With `count` adjusters and load `rho`:
+        #   if count <= rho, queue grows unbounded -> utilization approaches (count/rho) * (mttf/(mttf+repair))
+        #   if count > rho, steady state is stable
+        if count >= rho and rho > 0:
+            # Probability a machine is down ~ rho * mean_repair / (count * mttf) scaled
+            # Approximate: fraction of machines being repaired at any time = rho / total_machines
+            # With enough adjusters, wait time drops, so effective downtime ~ repair_time only
+            avg_repair = sum(cat.count * cat.mean_repair_time for cat in payload.machine_categories) / total_machines if total_machines > 0 else 1
+            avg_mttf = sum(cat.count * cat.mttf for cat in payload.machine_categories) / total_machines if total_machines > 0 else 100
+            # Wait factor: when adjusters == rho, wait is high; as adjusters >> rho, wait -> 0
+            excess = count - rho
+            wait_factor = rho / (excess + rho) if (excess + rho) > 0 else 1.0  # fraction of repair time spent waiting
+            effective_downtime = avg_repair * (1 + wait_factor)
+            machine_util = min(99.5, (avg_mttf / (avg_mttf + effective_downtime)) * 100)
+        elif rho > 0:
+            # Understaffed: queue grows, utilization degrades significantly
+            machine_util = min(95.0, max(10.0, (count / rho) * 80.0))
+        else:
+            machine_util = 99.5  # no failures expected
+
+        # Adjuster utilization: what fraction of time adjusters are busy
+        if count > 0:
+            adjuster_util = min(99.0, max(5.0, (rho / count) * 100))
+        else:
+            adjuster_util = 0.0
 
         tradeoff_curve.append(
             TradeoffPoint(
@@ -68,25 +107,12 @@ def _generate_mock_optimization_result(
             )
         )
 
-        # "Elbow" heuristic: maximize combined score with diminishing returns penalty
-        score = machine_util * 0.6 + adjuster_util * 0.4
+        # Elbow heuristic: maximize machine uptime without wasting adjuster time
+        # We want machine_util high but adjuster_util not too low
+        score = machine_util * 0.7 + adjuster_util * 0.3
         if score > best_score:
             best_score = score
             optimum_count = count
-
-    # Ensure we have the optimum count in the curve
-    if optimum_count not in [pt.adjuster_count for pt in tradeoff_curve]:
-        ratio = optimum_count / max(total_machines * 0.01, 1)
-        machine_util = min(99.0, 40.0 + 50.0 * (1.0 - 1.0 / (1.0 + ratio)))
-        adjuster_util = max(10.0, 99.0 - ratio * 30.0)
-        tradeoff_curve.append(
-            TradeoffPoint(
-                adjuster_count=optimum_count,
-                machine_utilization=round(machine_util, 1),
-                adjuster_utilization=round(adjuster_util, 1),
-            )
-        )
-        tradeoff_curve.sort(key=lambda pt: pt.adjuster_count)
 
     # Build recommendation reason
     opt_point = next(
