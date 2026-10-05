@@ -31,7 +31,7 @@ export default function ManagerHistoryPanel({
 }) {
   const [factories, setFactories] = useState([]);
   const [selectedFactoryId, setSelectedFactoryId] = useState('');
-  const [newFactoryName, setNewFactoryName] = useState('');
+
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -42,12 +42,21 @@ export default function ManagerHistoryPanel({
   const refreshData = async () => {
     setLoading(true);
     try {
-      const [facList, histList] = await Promise.all([
-        listFactories().catch(() => []),
-        getManagerHistory().catch(() => []),
-      ]);
+      let facList = await listFactories().catch(() => []);
+      
+      // Auto-create default factory profile if none exists
+      if (!facList || facList.length === 0) {
+        const { getStoredUser } = await import('../../api/authApi');
+        const user = getStoredUser();
+        const fallbackName = user?.factory_name || 'My Factory';
+        await createFactory(fallbackName).catch(() => {});
+        facList = await listFactories().catch(() => []);
+      }
+
+      const histList = await getManagerHistory().catch(() => []);
+      
       setFactories(facList || []);
-      if (facList && facList.length > 0 && !selectedFactoryId) {
+      if (facList && facList.length > 0) {
         setSelectedFactoryId(facList[0].id);
       }
       setHistory(histList || []);
@@ -61,20 +70,6 @@ export default function ManagerHistoryPanel({
   useEffect(() => {
     refreshData();
   }, []);
-
-  const handleCreateFactory = async (e) => {
-    e.preventDefault();
-    if (!newFactoryName.trim()) return;
-    try {
-      const created = await createFactory(newFactoryName.trim());
-      setNewFactoryName('');
-      setStatusMsg({ text: `Factory "${created.factory_name}" created!`, type: 'success' });
-      await refreshData();
-      setSelectedFactoryId(created.id);
-    } catch (err) {
-      setStatusMsg({ text: err.message || 'Failed creating factory', type: 'error' });
-    }
-  };
 
   const handleSaveCurrentReport = async () => {
     if (!selectedFactoryId) {
@@ -185,57 +180,10 @@ export default function ManagerHistoryPanel({
 
       {/* VIEW 1: SAVE ACTIVE RUN */}
       {activeView === 'save' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Factory Selector / Creator */}
-          <div className="space-y-4 lg:border-r lg:border-slate-100 lg:pr-6">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                Target Factory
-              </label>
-              {factories.length > 0 ? (
-                <select
-                  value={selectedFactoryId}
-                  onChange={(e) => setSelectedFactoryId(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {factories.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      🏭 {f.factory_name} ({f.report_count || 0} reports)
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
-                  No factories found. Create one below to save reports.
-                </p>
-              )}
-            </div>
-
-            <form onSubmit={handleCreateFactory} className="pt-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                + Create New Factory Profile
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="e.g. Pune Plant Alpha"
-                  value={newFactoryName}
-                  onChange={(e) => setNewFactoryName(e.target.value)}
-                  className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <button
-                  type="submit"
-                  disabled={!newFactoryName.trim()}
-                  className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-medium hover:bg-slate-800 disabled:opacity-50"
-                >
-                  Add
-                </button>
-              </div>
-            </form>
-          </div>
+        <div className="grid grid-cols-1 gap-6">
 
           {/* Report Metadata & Action */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Report Title / Notes (Optional)
