@@ -218,10 +218,10 @@ async def get_presets() -> Dict[str, Any]:
                 "description": "Standard automotive manufacturing with 200 Lathes, 50 Turning, 80 Drilling, 30 Soldering machines",
                 "simulation_time": 10000,
                 "machine_categories": [
-                    {"name": "Lathe", "count": 200, "mttf": 100, "mean_repair_time": 10},
-                    {"name": "Turning", "count": 50, "mttf": 150, "mean_repair_time": 12},
-                    {"name": "Drilling", "count": 80, "mttf": 80, "mean_repair_time": 8},
-                    {"name": "Soldering", "count": 30, "mttf": 200, "mean_repair_time": 15},
+                    {"name": "Lathe", "count": 200, "mttf": 2000, "mean_repair_time": 5},
+                    {"name": "Turning", "count": 50, "mttf": 3000, "mean_repair_time": 6},
+                    {"name": "Drilling", "count": 80, "mttf": 1600, "mean_repair_time": 4},
+                    {"name": "Soldering", "count": 30, "mttf": 4000, "mean_repair_time": 7},
                 ],
                 "adjusters": [
                     {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Turning"]},
@@ -235,8 +235,8 @@ async def get_presets() -> Dict[str, Any]:
                 "description": "Small-scale workshop with 20 Lathes, 10 Drilling machines",
                 "simulation_time": 5000,
                 "machine_categories": [
-                    {"name": "Lathe", "count": 20, "mttf": 120, "mean_repair_time": 8},
-                    {"name": "Drilling", "count": 10, "mttf": 90, "mean_repair_time": 6},
+                    {"name": "Lathe", "count": 20, "mttf": 2400, "mean_repair_time": 4},
+                    {"name": "Drilling", "count": 10, "mttf": 1800, "mean_repair_time": 3},
                 ],
                 "adjusters": [
                     {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Drilling"]},
@@ -248,11 +248,11 @@ async def get_presets() -> Dict[str, Any]:
                 "description": "Large-scale factory with high machine counts and diverse categories",
                 "simulation_time": 20000,
                 "machine_categories": [
-                    {"name": "Lathe", "count": 500, "mttf": 80, "mean_repair_time": 12},
-                    {"name": "Turning", "count": 200, "mttf": 120, "mean_repair_time": 10},
-                    {"name": "Drilling", "count": 300, "mttf": 100, "mean_repair_time": 9},
-                    {"name": "Soldering", "count": 150, "mttf": 180, "mean_repair_time": 14},
-                    {"name": "Welding", "count": 100, "mttf": 60, "mean_repair_time": 20},
+                    {"name": "Lathe", "count": 500, "mttf": 1600, "mean_repair_time": 6},
+                    {"name": "Turning", "count": 200, "mttf": 2400, "mean_repair_time": 5},
+                    {"name": "Drilling", "count": 300, "mttf": 2000, "mean_repair_time": 4},
+                    {"name": "Soldering", "count": 150, "mttf": 3600, "mean_repair_time": 7},
+                    {"name": "Welding", "count": 100, "mttf": 1200, "mean_repair_time": 10},
                 ],
                 "adjusters": [
                     {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Turning"]},

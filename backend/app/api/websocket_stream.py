@@ -279,26 +279,7 @@ async def websocket_live_stream(websocket: WebSocket) -> None:
             if stop_event.is_set():
                 break
 
-            # 1. Failure Roll
-            for m in machines:
-                if m["state"] == "WORKING":
-                    if m["mttf"] > 0 and random.random() < (1.0 / m["mttf"]):
-                        m["state"] = "WAITING_FOR_REPAIR"
-                        total_failures += 1
-
-            # 2. Repair Assignment
-            waiting_machines = [m for m in machines if m["state"] == "WAITING_FOR_REPAIR"]
-            for m in waiting_machines:
-                for a in adjusters:
-                    if a["state"] == "IDLE" and m["category"] in a["expertise"]:
-                        m["state"] = "UNDER_REPAIR"
-                        m["assigned_adjuster"] = a["name"]
-                        m["repair_remaining"] = m["mean_repair_time"]
-                        a["state"] = "BUSY"
-                        a["assigned_machine"] = m["id"]
-                        break
-
-            # 3. Repair Countdown
+            # 1. Repair Countdown (do this FIRST so newly assigned machines get their full repair time)
             for m in machines:
                 if m["state"] == "UNDER_REPAIR":
                     m["repair_remaining"] -= 1
@@ -311,6 +292,25 @@ async def websocket_live_stream(websocket: WebSocket) -> None:
                                 break
                         m["assigned_adjuster"] = None
                         total_repairs += 1
+
+            # 2. Failure Roll
+            for m in machines:
+                if m["state"] == "WORKING":
+                    if m["mttf"] > 0 and random.random() < (1.0 / m["mttf"]):
+                        m["state"] = "WAITING_FOR_REPAIR"
+                        total_failures += 1
+
+            # 3. Repair Assignment
+            waiting_machines = [m for m in machines if m["state"] == "WAITING_FOR_REPAIR"]
+            for m in waiting_machines:
+                for a in adjusters:
+                    if a["state"] == "IDLE" and m["category"] in a["expertise"]:
+                        m["state"] = "UNDER_REPAIR"
+                        m["assigned_adjuster"] = a["name"]
+                        m["repair_remaining"] = max(1, int(round(m["mean_repair_time"])))
+                        a["state"] = "BUSY"
+                        a["assigned_machine"] = m["id"]
+                        break
 
             # Prepare stats
             running_count = sum(1 for m in machines if m["state"] == "WORKING")

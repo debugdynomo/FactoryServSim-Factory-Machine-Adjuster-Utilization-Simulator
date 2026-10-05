@@ -352,7 +352,7 @@ export default function App() {
 
                 {/* Live Stats Row */}
                 {liveStats && (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                     <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-emerald-700">{liveStats.running}</div>
                       <div className="text-xs text-emerald-600 font-medium">Running</div>
@@ -364,6 +364,10 @@ export default function App() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-blue-700">{liveStats.repairing}</div>
                       <div className="text-xs text-blue-600 font-medium">Under Repair</div>
+                    </div>
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-purple-700">{liveStats.idle_adjusters}</div>
+                      <div className="text-xs text-purple-600 font-medium">Idle Adjusters</div>
                     </div>
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-slate-700">{liveStats.total_failures}</div>

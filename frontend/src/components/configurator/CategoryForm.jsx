@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 const EMPTY_CATEGORY = {
   name: '',
   count: 0,
-  mttf: 100,
-  mean_repair_time: 10,
+  mttf: 2000,
+  mean_repair_time: 5,
 };
 
 export default function CategoryForm({ categories, onChange }) {
