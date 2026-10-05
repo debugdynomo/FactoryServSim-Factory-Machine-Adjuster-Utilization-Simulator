@@ -5,7 +5,7 @@ import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import ManagerHistoryPanel from './components/analytics/ManagerHistoryPanel';
 import AuthPage from './components/auth/AuthPage';
 import { getToken, getStoredUser, logoutUser } from './api/authApi';
-import { LogOut, User, Factory, Settings, BarChart3, Eye, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { LogOut, User, Factory, Settings, BarChart3, Eye, ChevronLeft, Menu, ClipboardList } from 'lucide-react';
 
 /**
  * FactoryServSim — Professional Dashboard with Sidebar Navigation
@@ -65,6 +65,7 @@ export default function App() {
     { id: 'config', label: 'Setup', icon: Settings, always: true },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, always: false, needs: hasResults },
     { id: 'visualizer', label: 'Live Floor', icon: Eye, always: false, needs: !!simulationResults },
+    { id: 'history', label: 'History', icon: ClipboardList, always: true },
   ];
 
   return (
@@ -185,11 +186,13 @@ export default function App() {
                   {activePage === 'config' && '⚙️ Setup Configuration'}
                   {activePage === 'analytics' && '📊 Analytics & Results'}
                   {activePage === 'visualizer' && '🏭 Live Factory Floor'}
+                  {activePage === 'history' && '📋 Report History'}
                 </h2>
                 <p className="text-xs text-slate-500">
                   {activePage === 'config' && 'Configure machines, adjusters, and run analysis'}
                   {activePage === 'analytics' && 'View simulation results and optimization insights'}
                   {activePage === 'visualizer' && 'Real-time factory floor state visualization'}
+                  {activePage === 'history' && 'Browse and reload past simulation & optimization runs'}
                 </p>
               </div>
             </div>
@@ -235,14 +238,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-
-                {/* History Panel inside Analytics */}
-                <ManagerHistoryPanel
-                  currentConfig={currentConfig}
-                  simulationResults={simulationResults}
-                  optimizationResults={optimizationResults}
-                  onLoadHistoricalRun={handleLoadHistoricalRun}
-                />
               </div>
             </div>
 
@@ -266,6 +261,16 @@ export default function App() {
                 />
                 <FactoryFloorGrid machines={simulationResults?.machines || (simulationResults?.category_metrics ? simulationResults.category_metrics.flatMap((cat, i) => Array.from({ length: Math.min(12, Math.max(3, Math.floor(cat.total_failures / 100))) }).map((_, j) => { const r = Math.random(); return {id: `${i}-${j}`, name: `${cat.category} Unit ${j+1}`, category: cat.category, state: r > 0.9 ? 'UNDER_REPAIR' : (r > 0.7 ? 'WAITING_FOR_REPAIR' : 'RUNNING')} })) : [])} />
               </section>
+            </div>
+
+            {/* HISTORY PAGE */}
+            <div className={`transition-all duration-300 ${activePage === 'history' ? 'opacity-100' : 'hidden opacity-0'}`}>
+              <ManagerHistoryPanel
+                currentConfig={currentConfig}
+                simulationResults={simulationResults}
+                optimizationResults={optimizationResults}
+                onLoadHistoricalRun={handleLoadHistoricalRun}
+              />
             </div>
           </div>
         </div>
