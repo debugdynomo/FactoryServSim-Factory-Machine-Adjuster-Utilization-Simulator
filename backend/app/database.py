@@ -101,10 +101,11 @@ def init_db():
     mongo_db = get_mongo_db()
     if mongo_db is not None:
         try:
-            mongo_db.users.create_index("email", unique=True)
-            mongo_db.factories.create_index("user_email")
+            # Create a unique compound index on factory_id and email
+            mongo_db.users.create_index([("factory_id", 1), ("email", 1)], unique=True)
+            mongo_db.factories.create_index("factory_id")
             mongo_db.reports.create_index("factory_id")
-            mongo_db.reports.create_index("user_email")
+            mongo_db.reports.create_index("factory_doc_id")
             logger.info("MongoDB collections and indexes initialized successfully.")
         except Exception as e:
             logger.error("Failed creating MongoDB indexes: %s", e)

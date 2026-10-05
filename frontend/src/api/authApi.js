@@ -3,6 +3,7 @@
  *
  * Connects to the backend auth and factory endpoints.
  * Manages JWT token storage in localStorage.
+ * Auth is factory_id-based: data persists per factory, not per manager.
  */
 
 const API_BASE = 'https://factoryservsim-factory-machine-adjuster.onrender.com';
@@ -42,29 +43,39 @@ function authHeaders() {
 // Auth API
 // ---------------------------------------------------------------------------
 
-export async function registerUser(email, password, managerName) {
+export async function registerUser(factoryId, factoryName, managerName, email, password) {
   const response = await fetch(`${API_BASE}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, manager_name: managerName }),
+    body: JSON.stringify({
+      factory_id: factoryId,
+      factory_name: factoryName,
+      manager_name: managerName,
+      email,
+      password,
+    }),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail || 'Registration failed');
-  setToken(data.access_token);
-  setStoredUser({ email: data.email, manager_name: data.manager_name });
+  // Registration does NOT auto-login anymore — just return the success message
   return data;
 }
 
-export async function loginUser(email, password) {
+export async function loginUser(factoryId, email, password) {
   const response = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ factory_id: factoryId, email, password }),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail || 'Login failed');
   setToken(data.access_token);
-  setStoredUser({ email: data.email, manager_name: data.manager_name });
+  setStoredUser({
+    email: data.email,
+    manager_name: data.manager_name,
+    factory_id: data.factory_id,
+    factory_name: data.factory_name,
+  });
   return data;
 }
 

@@ -5,7 +5,7 @@ import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import ManagerHistoryPanel from './components/analytics/ManagerHistoryPanel';
 import AuthPage from './components/auth/AuthPage';
 import { getToken, getStoredUser, logoutUser } from './api/authApi';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Factory } from 'lucide-react';
 
 /**
  * FactoryServSim — Unified Full-Stack Application Shell
@@ -86,7 +86,13 @@ export default function App() {
               Machine-Adjuster Utilization Simulator & MongoDB Report Manager
             </p>
           </div>
-          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-300 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+              <Factory className="w-4 h-4 text-emerald-400" />
+              <span>{user?.factory_name || 'Factory'}</span>
+              <span className="text-slate-500">|</span>
+              <span className="text-slate-400 font-mono text-xs">{user?.factory_id || ''}</span>
+            </div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-300 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
               <User className="w-4 h-4 text-indigo-400" />
               <span>{user?.manager_name || user?.email || 'Manager'}</span>

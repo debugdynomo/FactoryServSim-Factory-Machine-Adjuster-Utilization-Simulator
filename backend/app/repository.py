@@ -1,6 +1,10 @@
 """
 Unified data repository supporting MongoDB as primary with SQLite fallback.
 Provides clean dictionary-based abstractions for Users, Factories, and Reports.
+
+Data is stored per factory_id, NOT per user email. This ensures that when a
+manager leaves and a new one registers with the same factory_id, all historical
+data (factories, reports) persists.
 """
 
 from datetime import datetime, timezone
@@ -27,6 +31,7 @@ def _serialize_id(val: Any) -> str:
 # ---------------------------------------------------------------------------
 
 def find_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """Legacy lookup by email only. Used for backward compatibility."""
     mongo_db = get_mongo_db()
     if mongo_db is not None:
         user = mongo_db.users.find_one({"email": email})
@@ -44,16 +49,46 @@ def find_user_by_email(email: str) -> Optional[Dict[str, Any]]:
                 "email": u.email,
                 "hashed_password": u.hashed_password,
                 "manager_name": u.manager_name,
+                "factory_id": getattr(u, 'factory_id', ''),
+                "factory_name": getattr(u, 'factory_name', ''),
                 "created_at": u.created_at.isoformat() if u.created_at else "",
             }
         return None
 
 
-def create_user(email: str, hashed_password: str, manager_name: str) -> Dict[str, Any]:
+def find_user_by_factory_and_email(factory_id: str, email: str) -> Optional[Dict[str, Any]]:
+    """Find a user by both factory_id AND email."""
+    mongo_db = get_mongo_db()
+    if mongo_db is not None:
+        user = mongo_db.users.find_one({"factory_id": factory_id, "email": email})
+        if user:
+            user["id"] = _serialize_id(user["_id"])
+            return user
+        return None
+
+    # SQLite fallback
+    with SessionLocal() as db:
+        u = db.query(SqlUser).filter(SqlUser.email == email).first()
+        if u and getattr(u, 'factory_id', '') == factory_id:
+            return {
+                "id": str(u.id),
+                "email": u.email,
+                "hashed_password": u.hashed_password,
+                "manager_name": u.manager_name,
+                "factory_id": getattr(u, 'factory_id', ''),
+                "factory_name": getattr(u, 'factory_name', ''),
+                "created_at": u.created_at.isoformat() if u.created_at else "",
+            }
+        return None
+
+
+def create_user(factory_id: str, factory_name: str, email: str, hashed_password: str, manager_name: str) -> Dict[str, Any]:
     mongo_db = get_mongo_db()
     now = datetime.now(timezone.utc)
     if mongo_db is not None:
         doc = {
+            "factory_id": factory_id,
+            "factory_name": factory_name,
             "email": email,
             "hashed_password": hashed_password,
             "manager_name": manager_name,
@@ -74,22 +109,25 @@ def create_user(email: str, hashed_password: str, manager_name: str) -> Dict[str
             "email": u.email,
             "hashed_password": u.hashed_password,
             "manager_name": u.manager_name,
+            "factory_id": factory_id,
+            "factory_name": factory_name,
             "created_at": u.created_at.isoformat() if u.created_at else "",
         }
 
 
 # ---------------------------------------------------------------------------
-# Factory Data Access
+# Factory Data Access (keyed by factory_id from user registration)
 # ---------------------------------------------------------------------------
 
-def list_user_factories(user_email: str) -> List[Dict[str, Any]]:
+def list_user_factories(factory_id: str) -> List[Dict[str, Any]]:
+    """List all factory profiles for a given factory_id."""
     mongo_db = get_mongo_db()
     if mongo_db is not None:
-        cursor = mongo_db.factories.find({"user_email": user_email}).sort("created_at", -1)
+        cursor = mongo_db.factories.find({"factory_id": factory_id}).sort("created_at", -1)
         results = []
         for doc in cursor:
             doc_id = str(doc["_id"])
-            rep_count = mongo_db.reports.count_documents({"factory_id": doc_id})
+            rep_count = mongo_db.reports.count_documents({"factory_doc_id": doc_id})
             results.append({
                 "id": doc_id,
                 "factory_name": doc["factory_name"],
@@ -100,10 +138,7 @@ def list_user_factories(user_email: str) -> List[Dict[str, Any]]:
 
     # SQLite fallback
     with SessionLocal() as db:
-        u = db.query(SqlUser).filter(SqlUser.email == user_email).first()
-        if not u:
-            return []
-        factories = db.query(SqlFactory).filter(SqlFactory.user_id == u.id).order_by(SqlFactory.created_at.desc()).all()
+        factories = db.query(SqlFactory).order_by(SqlFactory.created_at.desc()).all()
         return [
             {
                 "id": str(f.id),
@@ -115,13 +150,14 @@ def list_user_factories(user_email: str) -> List[Dict[str, Any]]:
         ]
 
 
-def create_factory_doc(user_email: str, factory_name: str) -> Dict[str, Any]:
+def create_factory_doc(factory_id: str, factory_name: str) -> Dict[str, Any]:
+    """Create a new factory profile document tied to the user's factory_id."""
     mongo_db = get_mongo_db()
     now = datetime.now(timezone.utc)
     if mongo_db is not None:
         doc = {
             "factory_name": factory_name,
-            "user_email": user_email,
+            "factory_id": factory_id,
             "created_at": now,
         }
         res = mongo_db.factories.insert_one(doc)
@@ -134,8 +170,7 @@ def create_factory_doc(user_email: str, factory_name: str) -> Dict[str, Any]:
 
     # SQLite fallback
     with SessionLocal() as db:
-        u = db.query(SqlUser).filter(SqlUser.email == user_email).first()
-        f = SqlFactory(factory_name=factory_name, user_id=u.id)
+        f = SqlFactory(factory_name=factory_name, user_id=1)
         db.add(f)
         db.commit()
         db.refresh(f)
@@ -147,14 +182,15 @@ def create_factory_doc(user_email: str, factory_name: str) -> Dict[str, Any]:
         }
 
 
-def get_factory_by_id(factory_id: str, user_email: str) -> Optional[Dict[str, Any]]:
+def get_factory_by_id(factory_doc_id: str, factory_id: str) -> Optional[Dict[str, Any]]:
+    """Get a factory profile by its document ID, scoped to the user's factory_id."""
     mongo_db = get_mongo_db()
     if mongo_db is not None:
         try:
-            oid = ObjectId(factory_id)
-            doc = mongo_db.factories.find_one({"_id": oid, "user_email": user_email})
+            oid = ObjectId(factory_doc_id)
+            doc = mongo_db.factories.find_one({"_id": oid, "factory_id": factory_id})
         except Exception:
-            doc = mongo_db.factories.find_one({"_id": factory_id, "user_email": user_email})
+            doc = mongo_db.factories.find_one({"_id": factory_doc_id, "factory_id": factory_id})
 
         if doc:
             return {
@@ -167,13 +203,10 @@ def get_factory_by_id(factory_id: str, user_email: str) -> Optional[Dict[str, An
     # SQLite fallback
     with SessionLocal() as db:
         try:
-            fid = int(factory_id)
+            fid = int(factory_doc_id)
         except ValueError:
             return None
-        u = db.query(SqlUser).filter(SqlUser.email == user_email).first()
-        if not u:
-            return None
-        f = db.query(SqlFactory).filter(SqlFactory.id == fid, SqlFactory.user_id == u.id).first()
+        f = db.query(SqlFactory).filter(SqlFactory.id == fid).first()
         if f:
             return {
                 "id": str(f.id),
@@ -183,29 +216,27 @@ def get_factory_by_id(factory_id: str, user_email: str) -> Optional[Dict[str, An
         return None
 
 
-def delete_factory_doc(factory_id: str, user_email: str) -> bool:
+def delete_factory_doc(factory_doc_id: str, factory_id: str) -> bool:
+    """Delete a factory profile and all its reports, scoped to factory_id."""
     mongo_db = get_mongo_db()
     if mongo_db is not None:
         try:
-            oid = ObjectId(factory_id)
-            res = mongo_db.factories.delete_one({"_id": oid, "user_email": user_email})
+            oid = ObjectId(factory_doc_id)
+            res = mongo_db.factories.delete_one({"_id": oid, "factory_id": factory_id})
         except Exception:
-            res = mongo_db.factories.delete_one({"_id": factory_id, "user_email": user_email})
+            res = mongo_db.factories.delete_one({"_id": factory_doc_id, "factory_id": factory_id})
         if res.deleted_count > 0:
-            mongo_db.reports.delete_many({"factory_id": factory_id})
+            mongo_db.reports.delete_many({"factory_doc_id": factory_doc_id})
             return True
         return False
 
     # SQLite fallback
     with SessionLocal() as db:
         try:
-            fid = int(factory_id)
+            fid = int(factory_doc_id)
         except ValueError:
             return False
-        u = db.query(SqlUser).filter(SqlUser.email == user_email).first()
-        if not u:
-            return False
-        f = db.query(SqlFactory).filter(SqlFactory.id == fid, SqlFactory.user_id == u.id).first()
+        f = db.query(SqlFactory).filter(SqlFactory.id == fid).first()
         if f:
             db.delete(f)
             db.commit()
@@ -217,7 +248,8 @@ def delete_factory_doc(factory_id: str, user_email: str) -> bool:
 # Reports Data Access & History
 # ---------------------------------------------------------------------------
 
-def save_report_doc(factory_id: str, user_email: str, report_data: Dict[str, Any]) -> Dict[str, Any]:
+def save_report_doc(factory_doc_id: str, factory_id: str, report_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Save a simulation/optimization report, keyed by factory_id for persistence."""
     mongo_db = get_mongo_db()
     now = datetime.now(timezone.utc)
     machine_util = None
@@ -229,8 +261,8 @@ def save_report_doc(factory_id: str, user_email: str, report_data: Dict[str, Any
 
     if mongo_db is not None:
         doc = {
+            "factory_doc_id": factory_doc_id,
             "factory_id": factory_id,
-            "user_email": user_email,
             "report_name": report_data.get("report_name") or f"{report_data.get('report_type', 'Simulation').capitalize()} Report",
             "report_type": report_data.get("report_type", "simulation"),
             "simulation_time": report_data["simulation_time"],
@@ -250,7 +282,7 @@ def save_report_doc(factory_id: str, user_email: str, report_data: Dict[str, Any
 
     # SQLite fallback
     with SessionLocal() as db:
-        fid = int(factory_id)
+        fid = int(factory_doc_id)
         rep = SqlReport(
             factory_id=fid,
             report_type=report_data.get("report_type", "simulation"),
@@ -284,10 +316,10 @@ def save_report_doc(factory_id: str, user_email: str, report_data: Dict[str, Any
         }
 
 
-def get_factory_reports(factory_id: str) -> List[Dict[str, Any]]:
+def get_factory_reports(factory_doc_id: str) -> List[Dict[str, Any]]:
     mongo_db = get_mongo_db()
     if mongo_db is not None:
-        cursor = mongo_db.reports.find({"factory_id": factory_id}).sort("created_at", -1)
+        cursor = mongo_db.reports.find({"factory_doc_id": factory_doc_id}).sort("created_at", -1)
         results = []
         for doc in cursor:
             results.append({
@@ -309,7 +341,7 @@ def get_factory_reports(factory_id: str) -> List[Dict[str, Any]]:
     # SQLite fallback
     with SessionLocal() as db:
         try:
-            fid = int(factory_id)
+            fid = int(factory_doc_id)
         except ValueError:
             return []
         reps = db.query(SqlReport).filter(SqlReport.factory_id == fid).order_by(SqlReport.created_at.desc()).all()
@@ -332,17 +364,17 @@ def get_factory_reports(factory_id: str) -> List[Dict[str, Any]]:
         ]
 
 
-def get_all_manager_reports_history(user_email: str) -> List[Dict[str, Any]]:
-    """Returns complete chronological report history across all factories for this manager."""
+def get_all_manager_reports_history(factory_id: str) -> List[Dict[str, Any]]:
+    """Returns complete chronological report history across all factory profiles for this factory_id."""
     mongo_db = get_mongo_db()
     if mongo_db is not None:
-        cursor = mongo_db.reports.find({"user_email": user_email}).sort("created_at", -1)
+        cursor = mongo_db.reports.find({"factory_id": factory_id}).sort("created_at", -1)
         results = []
         for doc in cursor:
             # Look up factory name for clarity
             factory_name = "Factory"
             try:
-                fid = doc.get("factory_id")
+                fid = doc.get("factory_doc_id")
                 fdoc = mongo_db.factories.find_one({"_id": ObjectId(fid)}) if ObjectId.is_valid(fid) else mongo_db.factories.find_one({"_id": fid})
                 if fdoc:
                     factory_name = fdoc.get("factory_name", "Factory")
@@ -351,7 +383,7 @@ def get_all_manager_reports_history(user_email: str) -> List[Dict[str, Any]]:
 
             results.append({
                 "id": str(doc["_id"]),
-                "factory_id": str(doc.get("factory_id")),
+                "factory_id": str(doc.get("factory_doc_id", doc.get("factory_id"))),
                 "factory_name": factory_name,
                 "report_name": doc.get("report_name") or f"{doc.get('report_type', 'Simulation').capitalize()} Report",
                 "report_type": doc.get("report_type", "simulation"),
@@ -369,10 +401,7 @@ def get_all_manager_reports_history(user_email: str) -> List[Dict[str, Any]]:
 
     # SQLite fallback
     with SessionLocal() as db:
-        u = db.query(SqlUser).filter(SqlUser.email == user_email).first()
-        if not u:
-            return []
-        factories = db.query(SqlFactory).filter(SqlFactory.user_id == u.id).all()
+        factories = db.query(SqlFactory).all()
         f_map = {f.id: f.factory_name for f in factories}
         factory_ids = list(f_map.keys())
         if not factory_ids:

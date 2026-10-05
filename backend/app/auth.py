@@ -15,10 +15,6 @@ import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
-
-from app.database import get_db
-from app.models.db_models import User
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -31,13 +27,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", "1440"))  # 
 
 # ---------------------------------------------------------------------------
 # Password Hashing (using bcrypt directly, compatible with bcrypt 5.x)
+# Using rounds=10 instead of default 12 for faster auth
 # ---------------------------------------------------------------------------
 
 
 def hash_password(password: str) -> str:
     """Hash a plaintext password using bcrypt."""
     password_bytes = password.encode("utf-8")[:72]  # bcrypt limit
-    salt = bcrypt.gensalt()
+    salt = bcrypt.gensalt(rounds=10)  # faster than default 12
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode("utf-8")
 
@@ -61,7 +58,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     Create a JWT access token.
 
     Args:
-        data: Payload dictionary (must contain 'sub' for user identification).
+        data: Payload dictionary. Must contain 'sub' (email) and 'factory_id'.
         expires_delta: Custom expiration time. Defaults to ACCESS_TOKEN_EXPIRE_MINUTES.
 
     Returns:
@@ -106,11 +103,13 @@ def get_current_user(
     """
     FastAPI dependency that extracts and validates the current user
     from the JWT Bearer token in the Authorization header.
+    Now uses both email (sub) and factory_id from the token.
     """
-    from app.repository import find_user_by_email
+    from app.repository import find_user_by_factory_and_email
 
     payload = decode_access_token(token)
     user_email: str = payload.get("sub")
+    factory_id: str = payload.get("factory_id")
 
     if user_email is None:
         raise HTTPException(
@@ -119,7 +118,14 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = find_user_by_email(user_email)
+    if factory_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token payload invalid: missing 'factory_id' claim",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = find_user_by_factory_and_email(factory_id, user_email)
 
     if user is None:
         raise HTTPException(

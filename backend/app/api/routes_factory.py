@@ -141,8 +141,8 @@ async def create_factory(
     request: CreateFactoryRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    doc = create_factory_doc(current_user["email"], request.factory_name)
-    logger.info("Factory created: '%s' by user '%s'", doc["factory_name"], current_user["manager_name"])
+    doc = create_factory_doc(current_user["factory_id"], request.factory_name)
+    logger.info("Factory created: '%s' by user '%s' (factory: %s)", doc["factory_name"], current_user["manager_name"], current_user["factory_id"])
     return FactoryResponse(
         id=str(doc["id"]),
         factory_name=doc["factory_name"],
@@ -155,7 +155,7 @@ async def create_factory(
 async def list_factories(
     current_user: dict = Depends(get_current_user),
 ):
-    factories = list_user_factories(current_user["email"])
+    factories = list_user_factories(current_user["factory_id"])
     return [
         FactoryResponse(
             id=str(f["id"]),
@@ -175,7 +175,7 @@ async def get_manager_history(
     Returns full history of all saved simulation & optimization reports
     for the logged-in manager across all factories.
     """
-    reports = get_all_manager_reports_history(current_user["email"])
+    reports = get_all_manager_reports_history(current_user["factory_id"])
     return [
         ReportResponse(
             id=str(r["id"]),
@@ -202,7 +202,7 @@ async def get_factory(
     factory_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    factory = get_factory_by_id(factory_id, current_user["email"])
+    factory = get_factory_by_id(factory_id, current_user["factory_id"])
     if not factory:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Factory not found")
 
@@ -237,10 +237,10 @@ async def delete_factory(
     factory_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    success = delete_factory_doc(factory_id, current_user["email"])
+    success = delete_factory_doc(factory_id, current_user["factory_id"])
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Factory not found")
-    logger.info("Factory deleted: %s by user %s", factory_id, current_user["manager_name"])
+    logger.info("Factory deleted: %s by user %s (factory: %s)", factory_id, current_user["manager_name"], current_user["factory_id"])
 
 
 # ---------------------------------------------------------------------------
@@ -253,7 +253,7 @@ async def save_report(
     request: SaveReportRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    factory = get_factory_by_id(factory_id, current_user["email"])
+    factory = get_factory_by_id(factory_id, current_user["factory_id"])
     if not factory:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Factory not found")
 
@@ -270,7 +270,7 @@ async def save_report(
         "per_adjuster_counts": request.per_adjuster_counts,
     }
 
-    doc = save_report_doc(factory_id, current_user["email"], report_data)
+    doc = save_report_doc(factory_id, current_user["factory_id"], report_data)
     logger.info("Report saved: factory='%s', id=%s", factory["factory_name"], doc["id"])
 
     return ReportResponse(
@@ -296,7 +296,7 @@ async def list_reports(
     factory_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    factory = get_factory_by_id(factory_id, current_user["email"])
+    factory = get_factory_by_id(factory_id, current_user["factory_id"])
     if not factory:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Factory not found")
 
