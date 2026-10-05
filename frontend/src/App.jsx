@@ -44,10 +44,28 @@ export default function App() {
     ws.onopen = () => {
       setLiveSimRunning(true);
       setLiveTick(0);
+      let simAdjusters = currentConfig.adjusters;
+      
+      if (optimizationResults && optimizationResults.per_adjuster_counts) {
+        simAdjusters = [];
+        let idCounter = 1;
+        for (const [profileName, count] of Object.entries(optimizationResults.per_adjuster_counts)) {
+          const originalProfile = currentConfig.adjusters.find(a => a.name === profileName);
+          const expertise = originalProfile ? originalProfile.expertise : [];
+          for (let i = 0; i < count; i++) {
+            simAdjusters.push({
+              id: idCounter++,
+              name: count > 1 ? `${profileName} - ${i + 1}` : profileName,
+              expertise: expertise
+            });
+          }
+        }
+      }
+
       ws.send(JSON.stringify({
         simulation_time: currentConfig.simulation_time,
         machine_categories: currentConfig.machine_categories,
-        adjusters: currentConfig.adjusters,
+        adjusters: simAdjusters,
       }));
     };
     
