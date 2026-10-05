@@ -104,7 +104,7 @@ export default function ConfiguratorSection({
     return '';
   };
 
-  // Single handler that runs BOTH simulation and optimization
+  // Single handler that runs optimization first, then simulation with optimal adjusters
   const handleRunAnalysis = async () => {
     const validationError = validate();
 
@@ -117,12 +117,37 @@ export default function ConfiguratorSection({
     setError('');
 
     try {
-      const payload = buildPayload();
-      // Run both in parallel for speed
-      const [simResult, optResult] = await Promise.all([
-        runSimulation(payload),
-        runOptimization(payload),
-      ]);
+      const basePayload = buildPayload();
+      
+      // 1. Run optimization first
+      const optResult = await runOptimization(basePayload);
+      
+      // 2. Build optimized adjusters payload based on per_adjuster_counts
+      let simAdjusters = basePayload.adjusters;
+      if (optResult && optResult.per_adjuster_counts) {
+        simAdjusters = [];
+        let idCounter = 1;
+        for (const [profileName, count] of Object.entries(optResult.per_adjuster_counts)) {
+          const originalProfile = basePayload.adjusters.find(a => a.name === profileName);
+          const expertise = originalProfile ? originalProfile.expertise : [];
+          for (let i = 0; i < count; i++) {
+            simAdjusters.push({
+              id: idCounter++,
+              name: count > 1 ? `${profileName} - ${i + 1}` : profileName,
+              expertise: expertise
+            });
+          }
+        }
+      }
+      
+      const optimizedPayload = {
+        ...basePayload,
+        adjusters: simAdjusters,
+      };
+
+      // 3. Run simulation with optimal adjusters
+      const simResult = await runSimulation(optimizedPayload);
+      
       onAnalysisComplete?.(simResult, optResult);
     } catch (requestError) {
       setError(requestError.message || 'Analysis failed.');
