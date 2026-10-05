@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ConfiguratorSection from './components/configurator/ConfiguratorSection';
 import { FactoryFloorGrid, SingleQueueBar } from './components/floor_visualizer';
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
@@ -18,6 +18,66 @@ export default function App() {
   const [optimizationResults, setOptimizationResults] = useState(null);
   const [activePage, setActivePage] = useState('config');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const [liveSimRunning, setLiveSimRunning] = useState(false);
+  const [liveMachines, setLiveMachines] = useState([]);
+  const [liveStats, setLiveStats] = useState(null);
+  const [liveTick, setLiveTick] = useState(0);
+  const [liveTotalTime, setLiveTotalTime] = useState(0);
+  const wsRef = useRef(null);
+
+  useEffect(() => {
+    return () => { if (wsRef.current) wsRef.current.close(); };
+  }, []);
+
+  const startLiveSimulation = () => {
+    if (wsRef.current) { wsRef.current.close(); }
+    if (!currentConfig || !currentConfig.machine_categories?.length) {
+      alert('Please configure machines first in Setup.');
+      return;
+    }
+    
+    const wsUrl = 'wss://factoryservsim-factory-machine-adjuster.onrender.com/api/ws/live';
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+    
+    ws.onopen = () => {
+      setLiveSimRunning(true);
+      setLiveTick(0);
+      ws.send(JSON.stringify({
+        simulation_time: currentConfig.simulation_time,
+        machine_categories: currentConfig.machine_categories,
+        adjusters: currentConfig.adjusters,
+      }));
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'tick') {
+        setLiveMachines(data.machines.map(m => ({
+          ...m,
+          adjusterId: m.assigned_adjuster,
+        })));
+        setLiveStats(data.stats);
+        setLiveTick(data.tick);
+        setLiveTotalTime(data.total_time);
+      } else if (data.type === 'complete') {
+        setLiveSimRunning(false);
+      }
+    };
+    
+    ws.onerror = () => { setLiveSimRunning(false); };
+    ws.onclose = () => { setLiveSimRunning(false); };
+  };
+
+  const stopLiveSimulation = () => {
+    if (wsRef.current) {
+      wsRef.current.send(JSON.stringify({ action: 'stop' }));
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setLiveSimRunning(false);
+  };
 
   const handleLoginSuccess = () => {
     setIsLoggedIn(true);
@@ -249,18 +309,78 @@ export default function App() {
                   <h2 className="text-lg font-bold text-slate-900">
                     🏭 Live Factory Floor & Single-Queue State
                   </h2>
-                  <button 
-                    onClick={() => setActivePage('analytics')}
-                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
-                  >
-                    ← Back to Analytics
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {!liveSimRunning ? (
+                      <button
+                        onClick={startLiveSimulation}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 flex items-center gap-2"
+                      >
+                        ▶ Start Live Simulation
+                      </button>
+                    ) : (
+                      <button
+                        onClick={stopLiveSimulation}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 flex items-center gap-2"
+                      >
+                        ⏹ Stop
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => setActivePage('analytics')}
+                      className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+                    >
+                      ← Back to Analytics
+                    </button>
+                  </div>
                 </div>
+
+                {/* Progress Bar */}
+                {liveSimRunning && liveTotalTime > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Tick {liveTick} / {liveTotalTime}</span>
+                      <span>{Math.round((liveTick / liveTotalTime) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div
+                        className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${(liveTick / liveTotalTime) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Stats Row */}
+                {liveStats && (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-emerald-700">{liveStats.running}</div>
+                      <div className="text-xs text-emerald-600 font-medium">Running</div>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-amber-700">{liveStats.waiting}</div>
+                      <div className="text-xs text-amber-600 font-medium">In Queue</div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-blue-700">{liveStats.repairing}</div>
+                      <div className="text-xs text-blue-600 font-medium">Under Repair</div>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-slate-700">{liveStats.total_failures}</div>
+                      <div className="text-xs text-slate-500 font-medium">Total Failures</div>
+                    </div>
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-indigo-700">{liveStats.total_repairs}</div>
+                      <div className="text-xs text-indigo-500 font-medium">Total Repairs</div>
+                    </div>
+                  </div>
+                )}
+
                 <SingleQueueBar
-                  machineQueueCount={simulationResults ? (simulationResults.summary?.overall_machine_utilization_pct < 95 ? Math.floor((100 - simulationResults.summary.overall_machine_utilization_pct)/5) + 1 : 0) : 0}
-                  idleAdjusterCount={simulationResults ? (simulationResults.summary?.overall_machine_utilization_pct >= 95 ? Math.floor(100 - simulationResults.summary.overall_adjuster_utilization_pct)/10 + 1 : 0) : 0}
+                  machineQueueCount={liveStats?.waiting || 0}
+                  idleAdjusterCount={liveStats?.idle_adjusters || 0}
                 />
-                <FactoryFloorGrid machines={simulationResults?.machines || (simulationResults?.category_metrics ? simulationResults.category_metrics.flatMap((cat, i) => Array.from({ length: Math.min(12, Math.max(3, Math.floor(cat.total_failures / 100))) }).map((_, j) => { const r = Math.random(); return {id: `${i}-${j}`, name: `${cat.category} Unit ${j+1}`, category: cat.category, state: r > 0.9 ? 'UNDER_REPAIR' : (r > 0.7 ? 'WAITING_FOR_REPAIR' : 'RUNNING')} })) : [])} />
+                <FactoryFloorGrid machines={liveMachines} />
               </section>
             </div>
 

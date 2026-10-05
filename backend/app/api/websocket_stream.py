@@ -209,6 +209,191 @@ async def websocket_stream(websocket: WebSocket) -> None:
 
 
 # ---------------------------------------------------------------------------
+# WebSocket Live Streaming Endpoint (Real-time Event-Driven Simulation)
+# ---------------------------------------------------------------------------
+
+@router.websocket("/api/ws/live")
+async def websocket_live_stream(websocket: WebSocket) -> None:
+    """
+    WebSocket endpoint for real-time live simulation streaming.
+    Streams individual machine and adjuster states every 1 second (1 tick = 1 hour sim time).
+    """
+    await websocket.accept()
+    logger.info("WebSocket live client connected")
+
+    try:
+        raw_data = await asyncio.wait_for(websocket.receive_text(), timeout=5.0)
+        config_data = json.loads(raw_data)
+        config = FactoryConfigInput(**config_data)
+    except Exception as e:
+        logger.error("Failed to receive config for live stream: %s", str(e))
+        await websocket.close()
+        return
+
+    machines = []
+    for cat in config.machine_categories:
+        for i in range(cat.count):
+            machines.append({
+                "id": f"{cat.name.lower().replace(' ', '_')}-{i}",
+                "name": f"{cat.name} Unit {i+1}",
+                "category": cat.name,
+                "mttf": cat.mttf,
+                "mean_repair_time": cat.mean_repair_time,
+                "state": "WORKING",
+                "assigned_adjuster": None,
+                "repair_remaining": 0,
+            })
+
+    adjusters = []
+    for adj in config.adjusters:
+        adjusters.append({
+            "id": adj.id,
+            "name": adj.name,
+            "expertise": adj.expertise,
+            "state": "IDLE",
+            "assigned_machine": None
+        })
+
+    simulation_time = config.simulation_time
+    total_time = simulation_time
+    total_failures = 0
+    total_repairs = 0
+
+    stop_event = asyncio.Event()
+
+    async def receive_messages():
+        try:
+            while True:
+                msg = await websocket.receive_text()
+                msg_data = json.loads(msg)
+                if msg_data.get("action") == "stop":
+                    stop_event.set()
+                    break
+        except Exception:
+            stop_event.set()
+
+    recv_task = asyncio.create_task(receive_messages())
+
+    try:
+        for tick in range(1, simulation_time + 1):
+            if stop_event.is_set():
+                break
+
+            # 1. Failure Roll
+            for m in machines:
+                if m["state"] == "WORKING":
+                    if m["mttf"] > 0 and random.random() < (1.0 / m["mttf"]):
+                        m["state"] = "WAITING_FOR_REPAIR"
+                        total_failures += 1
+
+            # 2. Repair Assignment
+            waiting_machines = [m for m in machines if m["state"] == "WAITING_FOR_REPAIR"]
+            for m in waiting_machines:
+                for a in adjusters:
+                    if a["state"] == "IDLE" and m["category"] in a["expertise"]:
+                        m["state"] = "UNDER_REPAIR"
+                        m["assigned_adjuster"] = a["name"]
+                        m["repair_remaining"] = m["mean_repair_time"]
+                        a["state"] = "BUSY"
+                        a["assigned_machine"] = m["id"]
+                        break
+
+            # 3. Repair Countdown
+            for m in machines:
+                if m["state"] == "UNDER_REPAIR":
+                    m["repair_remaining"] -= 1
+                    if m["repair_remaining"] <= 0:
+                        m["state"] = "WORKING"
+                        for a in adjusters:
+                            if a["assigned_machine"] == m["id"]:
+                                a["state"] = "IDLE"
+                                a["assigned_machine"] = None
+                                break
+                        m["assigned_adjuster"] = None
+                        total_repairs += 1
+
+            # Prepare stats
+            running_count = sum(1 for m in machines if m["state"] == "WORKING")
+            waiting_count = sum(1 for m in machines if m["state"] == "WAITING_FOR_REPAIR")
+            repairing_count = sum(1 for m in machines if m["state"] == "UNDER_REPAIR")
+            idle_adj = sum(1 for a in adjusters if a["state"] == "IDLE")
+            busy_adj = sum(1 for a in adjusters if a["state"] == "BUSY")
+
+            stats = {
+                "running": running_count,
+                "waiting": waiting_count,
+                "repairing": repairing_count,
+                "idle_adjusters": idle_adj,
+                "busy_adjusters": busy_adj,
+                "total_failures": total_failures,
+                "total_repairs": total_repairs
+            }
+
+            tick_msg = {
+                "type": "tick",
+                "tick": tick,
+                "simulation_time": tick,
+                "total_time": total_time,
+                "machines": [{
+                    "id": m["id"],
+                    "name": m["name"],
+                    "category": m["category"],
+                    "state": m["state"],
+                    "assigned_adjuster": m["assigned_adjuster"],
+                    "repair_remaining": m["repair_remaining"]
+                } for m in machines],
+                "adjusters": [{
+                    "id": a["id"],
+                    "name": a["name"],
+                    "state": a["state"],
+                    "assigned_machine": a["assigned_machine"]
+                } for a in adjusters],
+                "stats": stats
+            }
+
+            try:
+                await websocket.send_text(json.dumps(tick_msg))
+            except Exception:
+                stop_event.set()
+                break
+
+            # Wait 1 tick = 1 second, but allow early stop
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=1.0)
+                break
+            except asyncio.TimeoutError:
+                pass
+
+        # 4. Completion
+        if not stop_event.is_set():
+            final_stats = {
+                "running": sum(1 for m in machines if m["state"] == "WORKING"),
+                "waiting": sum(1 for m in machines if m["state"] == "WAITING_FOR_REPAIR"),
+                "repairing": sum(1 for m in machines if m["state"] == "UNDER_REPAIR"),
+                "idle_adjusters": sum(1 for a in adjusters if a["state"] == "IDLE"),
+                "busy_adjusters": sum(1 for a in adjusters if a["state"] == "BUSY"),
+                "total_failures": total_failures,
+                "total_repairs": total_repairs
+            }
+            complete_msg = {
+                "type": "complete",
+                "status": "complete",
+                "stats": final_stats
+            }
+            try:
+                await websocket.send_text(json.dumps(complete_msg))
+            except Exception:
+                pass
+    finally:
+        recv_task.cancel()
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+        logger.info("WebSocket live stream completed")
+
+
+# ---------------------------------------------------------------------------
 # Server-Sent Events (SSE) Streaming Endpoint
 # ---------------------------------------------------------------------------
 
