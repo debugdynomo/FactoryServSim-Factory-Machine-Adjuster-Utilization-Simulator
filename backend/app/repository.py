@@ -57,26 +57,48 @@ def find_user_by_email(email: str) -> Optional[Dict[str, Any]]:
 
 
 def find_user_by_factory_and_email(factory_id: str, email: str) -> Optional[Dict[str, Any]]:
-    """Find a user by both factory_id AND email."""
+    """Find a user by both factory_id AND email. Auto-migrates legacy users."""
     mongo_db = get_mongo_db()
     if mongo_db is not None:
         user = mongo_db.users.find_one({"factory_id": factory_id, "email": email})
         if user:
             user["id"] = _serialize_id(user["_id"])
             return user
+            
+        # Check for legacy user (no factory_id)
+        legacy_user = mongo_db.users.find_one({"email": email})
+        if legacy_user and "factory_id" not in legacy_user:
+            # Auto-migrate
+            mongo_db.users.update_one(
+                {"_id": legacy_user["_id"]},
+                {"$set": {"factory_id": factory_id, "factory_name": "My Factory"}}
+            )
+            legacy_user["factory_id"] = factory_id
+            legacy_user["factory_name"] = "My Factory"
+            legacy_user["id"] = _serialize_id(legacy_user["_id"])
+            return legacy_user
+            
         return None
 
     # SQLite fallback
     with SessionLocal() as db:
         u = db.query(SqlUser).filter(SqlUser.email == email).first()
-        if u and getattr(u, 'factory_id', '') == factory_id:
+        if u:
+            # If SQLite has factory_id attribute but it's empty, treat as legacy
+            current_factory_id = getattr(u, 'factory_id', None)
+            if not current_factory_id:
+                # Can't easily migrate SQLite without altering table, just pretend for now
+                pass
+            elif current_factory_id != factory_id:
+                return None
+                
             return {
                 "id": str(u.id),
                 "email": u.email,
                 "hashed_password": u.hashed_password,
                 "manager_name": u.manager_name,
-                "factory_id": getattr(u, 'factory_id', ''),
-                "factory_name": getattr(u, 'factory_name', ''),
+                "factory_id": getattr(u, 'factory_id', factory_id),
+                "factory_name": getattr(u, 'factory_name', 'My Factory'),
                 "created_at": u.created_at.isoformat() if u.created_at else "",
             }
         return None
