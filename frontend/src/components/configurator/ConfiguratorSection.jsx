@@ -16,8 +16,7 @@ const DEFAULT_CONFIG = {
 };
 
 export default function ConfiguratorSection({
-  onSimulationComplete,
-  onOptimizationComplete,
+  onAnalysisComplete,
   onConfigChange,
 }) {
   const [simulationTime, setSimulationTime] = useState(
@@ -94,7 +93,8 @@ export default function ConfiguratorSection({
     return '';
   };
 
-  const handleSimulation = async () => {
+  // Single handler that runs BOTH simulation and optimization
+  const handleRunAnalysis = async () => {
     const validationError = validate();
 
     if (validationError) {
@@ -106,31 +106,15 @@ export default function ConfiguratorSection({
     setError('');
 
     try {
-      const result = await runSimulation(buildPayload());
-      onSimulationComplete?.(result);
+      const payload = buildPayload();
+      // Run both in parallel for speed
+      const [simResult, optResult] = await Promise.all([
+        runSimulation(payload),
+        runOptimization(payload),
+      ]);
+      onAnalysisComplete?.(simResult, optResult);
     } catch (requestError) {
-      setError(requestError.message || 'Simulation failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOptimization = async () => {
-    const validationError = validate();
-
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const result = await runOptimization(buildPayload());
-      onOptimizationComplete?.(result);
-    } catch (requestError) {
-      setError(requestError.message || 'Optimization failed.');
+      setError(requestError.message || 'Analysis failed.');
     } finally {
       setLoading(false);
     }
@@ -146,7 +130,7 @@ export default function ConfiguratorSection({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">
-          Factory Configurator Wizard
+          Factory Configurator
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           Step {wizardStep} of {totalSteps}: {wizardStep === 1 ? 'Configure Machines' : wizardStep === 2 ? 'Configure Adjusters' : 'Review & Run'}
@@ -208,8 +192,7 @@ export default function ConfiguratorSection({
               simulationTime={simulationTime}
               categories={categories}
               adjusters={adjusters}
-              onSimulation={handleSimulation}
-              onOptimization={handleOptimization}
+              onRunAnalysis={handleRunAnalysis}
               loading={loading}
               error={error}
             />
@@ -240,7 +223,7 @@ export default function ConfiguratorSection({
           </button>
         ) : (
           <div className="text-sm text-slate-500 italic">
-            Ready to Run! Click a button above.
+            Ready to Run! Click the button above.
           </div>
         )}
       </div>

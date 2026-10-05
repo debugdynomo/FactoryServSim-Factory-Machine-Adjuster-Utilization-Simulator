@@ -4,8 +4,7 @@ export default function ConfigSummary({
   simulationTime,
   categories,
   adjusters,
-  onSimulation,
-  onOptimization,
+  onRunAnalysis,
   loading,
   error,
 }) {
@@ -34,7 +33,7 @@ export default function ConfigSummary({
           Configuration Summary
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Review the configuration before starting the simulation.
+          Review the configuration before running the full analysis.
         </p>
       </div>
 
@@ -82,24 +81,27 @@ export default function ConfigSummary({
         </div>
       )}
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-5">
         <button
           type="button"
           disabled={!canRun || loading}
-          onClick={onSimulation}
-          className="flex-1 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={onRunAnalysis}
+          className="w-full rounded-lg bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-3.5 font-bold text-white text-base transition-all hover:from-indigo-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
         >
-          {loading ? 'Running...' : 'Run Simulation'}
+          {loading ? (
+            <>
+              <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+              Running Full Analysis...
+            </>
+          ) : (
+            <>
+              🚀 Run Full Analysis
+            </>
+          )}
         </button>
-
-        <button
-          type="button"
-          disabled={!canRun || loading}
-          onClick={onOptimization}
-          className="flex-1 rounded-lg border border-blue-600 px-4 py-3 font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? 'Processing...' : 'Optimize Adjuster Count'}
-        </button>
+        <p className="text-xs text-slate-400 text-center mt-2">
+          Runs both Simulation & Optimization together
+        </p>
       </div>
     </section>
   );
