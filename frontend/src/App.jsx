@@ -164,13 +164,11 @@ export default function App() {
               </div>
               <div className="min-w-0">
                 <h1 className="text-sm font-bold text-white truncate">
-                  {user?.factory_name && user.factory_name !== 'My Factory' ? user.factory_name : (user?.factory_id || 'Factory Dashboard')}
+                  {user?.factory_name || 'Factory Dashboard'}
                 </h1>
-                {user?.factory_name && user.factory_name !== 'My Factory' && (
-                  <p className="text-[10px] text-slate-400 truncate uppercase tracking-wider font-semibold">
-                    ID: {user?.factory_id || 'FAC001'}
-                  </p>
-                )}
+                <p className="text-[10px] text-slate-400 truncate uppercase tracking-wider font-semibold">
+                  ID: {user?.factory_id || 'FAC001'}
+                </p>
               </div>
             </div>
           )}
