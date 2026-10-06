@@ -163,8 +163,14 @@ export default function App() {
                 <Cpu className="w-5 h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-sm font-bold text-white truncate">{user?.factory_name || 'Factory Dashboard'}</h1>
-                <p className="text-[10px] text-slate-400 truncate uppercase tracking-wider font-semibold">ID: {user?.factory_id || 'FAC001'}</p>
+                <h1 className="text-sm font-bold text-white truncate">
+                  {user?.factory_name && user.factory_name !== 'My Factory' ? user.factory_name : (user?.factory_id || 'Factory Dashboard')}
+                </h1>
+                {user?.factory_name && user.factory_name !== 'My Factory' && (
+                  <p className="text-[10px] text-slate-400 truncate uppercase tracking-wider font-semibold">
+                    ID: {user?.factory_id || 'FAC001'}
+                  </p>
+                )}
               </div>
             </div>
           )}
