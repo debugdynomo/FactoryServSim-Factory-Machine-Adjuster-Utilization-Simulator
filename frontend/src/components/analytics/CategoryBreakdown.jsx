@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { BarChart2, AlertTriangle } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -7,32 +6,63 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
+  Cell,
 } from 'recharts';
 
 /**
  * CategoryBreakdown — Person 6, Analytics Module
+ *
+ * Renders bar charts comparing metrics across machine categories
+ * (e.g., Lathe, Turning, Drilling, Soldering).
+ *
+ * Charts:
+ *   1. Category Utilization (%) — uptime comparison across categories
+ *   2. Total Failures by Category — failure count comparison
+ *
+ * Data source: `simulationResults.category_metrics` from Person 2/3's simulation API.
+ *
+ * Props:
+ *   - categoryMetrics: Array<{ category, utilization_pct, total_failures }>
  */
 
+/** Color palette for category bars */
+const CATEGORY_COLORS = [
+  '#10b981', // emerald
+  '#6366f1', // indigo
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#8b5cf6', // violet
+  '#14b8a6', // teal
+  '#f97316', // orange
+  '#ec4899', // pink
+];
+
+/**
+ * Custom tooltip for category charts.
+ */
 function CategoryTooltip({ active, payload, label }) {
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-[4px] px-3 py-2 text-[12px] shadow-lg">
-      <p className="font-semibold text-slate-900 mb-1 border-b border-slate-100 pb-1">{label}</p>
+    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-semibold text-gray-700 mb-1">{label}</p>
       {payload.map((entry) => (
-        <p key={entry.dataKey} className="text-slate-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {entry.name}: <span className="font-semibold text-slate-900">
-            {typeof entry.value === 'number' && entry.value % 1 !== 0
-              ? entry.value.toFixed(1) + '%'
-              : entry.value.toLocaleString()}
-          </span>
+        <p key={entry.dataKey} style={{ color: entry.color }}>
+          {entry.name}: {typeof entry.value === 'number' && entry.value % 1 !== 0
+            ? entry.value.toFixed(1) + '%'
+            : entry.value.toLocaleString()}
         </p>
       ))}
     </div>
   );
 }
 
+/**
+ * Transforms category_metrics to chart-friendly data format.
+ * Sorts by utilization descending for visual clarity.
+ */
 function useCategoryData(categoryMetrics) {
   return useMemo(() => {
     if (!categoryMetrics || categoryMetrics.length === 0) return [];
@@ -45,9 +75,11 @@ export default function CategoryBreakdown({ categoryMetrics = [] }) {
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-[6px] p-6 text-center text-slate-400">
-        <p className="text-[14px] font-medium">No category data available</p>
-        <p className="text-[12px] mt-1">Run a simulation to view category breakdown.</p>
+      <div className="bg-white rounded-xl shadow-md p-6 text-center text-gray-400">
+        <p className="text-lg">📊 Category Breakdown</p>
+        <p className="text-sm mt-2">
+          Run a simulation to see per-category utilization and failure metrics.
+        </p>
       </div>
     );
   }
@@ -55,94 +87,110 @@ export default function CategoryBreakdown({ categoryMetrics = [] }) {
   return (
     <div className="space-y-6">
       {/* Utilization by Category */}
-      <div className="bg-white border border-slate-200 rounded-[6px] p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart2 className="w-4 h-4 text-slate-400" />
-          <h3 className="text-[14px] font-semibold text-slate-900">Machine Utilization by Category</h3>
-        </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-            <XAxis dataKey="category" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} />
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          📊 Machine Utilization by Category
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="category" tick={{ fontSize: 12 }} />
             <YAxis
               domain={[0, 100]}
-              tick={{ fontSize: 12, fill: '#64748b' }}
-              tickLine={false}
-              axisLine={{ stroke: '#e2e8f0' }}
-              tickFormatter={(value) => `${value}%`}
+              label={{ value: 'Utilization (%)', angle: -90, position: 'insideLeft' }}
+              tick={{ fontSize: 12 }}
             />
-            <Tooltip content={<CategoryTooltip />} cursor={{ fill: '#f8fafc' }} />
+            <Tooltip content={<CategoryTooltip />} />
+            <Legend />
             <Bar
               dataKey="utilization_pct"
               name="Utilization"
-              fill="#2563eb"
               radius={[4, 4, 0, 0]}
-              maxBarSize={48}
-            />
+              maxBarSize={60}
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`util-cell-${index}`}
+                  fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Total Failures by Category */}
-      <div className="bg-white border border-slate-200 rounded-[6px] p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-4 h-4 text-slate-400" />
-          <h3 className="text-[14px] font-semibold text-slate-900">Total Failures by Category</h3>
-        </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-            <XAxis dataKey="category" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} />
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          🔧 Total Failures by Category
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="category" tick={{ fontSize: 12 }} />
             <YAxis
-              tick={{ fontSize: 12, fill: '#64748b' }}
-              tickLine={false}
-              axisLine={{ stroke: '#e2e8f0' }}
+              label={{ value: 'Failures', angle: -90, position: 'insideLeft' }}
+              tick={{ fontSize: 12 }}
             />
-            <Tooltip content={<CategoryTooltip />} cursor={{ fill: '#f8fafc' }} />
+            <Tooltip content={<CategoryTooltip />} />
+            <Legend />
             <Bar
               dataKey="total_failures"
               name="Total Failures"
-              fill="#94a3b8"
               radius={[4, 4, 0, 0]}
-              maxBarSize={48}
-            />
+              maxBarSize={60}
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`fail-cell-${index}`}
+                  fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
+                  fillOpacity={0.75}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Category Summary Table */}
-      <div className="bg-white border border-slate-200 rounded-[6px] p-5">
-        <h3 className="text-[14px] font-semibold text-slate-900 mb-4">Category Summary</h3>
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          📋 Category Summary
+        </h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-[14px] text-left">
-            <thead className="bg-slate-50 text-slate-500 uppercase text-[12px] font-semibold tracking-wider">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th className="px-4 py-3 border-y border-slate-200">Category</th>
-                <th className="px-4 py-3 border-y border-slate-200 text-right">Utilization (%)</th>
-                <th className="px-4 py-3 border-y border-slate-200 text-right">Total Failures</th>
-                <th className="px-4 py-3 border-y border-slate-200 text-right">Status</th>
+                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3 text-right">Utilization (%)</th>
+                <th className="px-4 py-3 text-right">Total Failures</th>
+                <th className="px-4 py-3 text-right">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {chartData.map((metric) => (
-                <tr key={metric.category} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-slate-900">
+            <tbody className="divide-y divide-gray-100">
+              {chartData.map((metric, index) => (
+                <tr key={metric.category} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-800">
+                    <span
+                      className="inline-block w-3 h-3 rounded-full mr-2"
+                      style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
+                    />
                     {metric.category}
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <td className="px-4 py-3 text-right font-mono">
                     {metric.utilization_pct.toFixed(1)}%
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <td className="px-4 py-3 text-right font-mono">
                     {metric.total_failures.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded-[4px] text-[12px] font-medium border ${
+                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
                         metric.utilization_pct >= 90
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          ? 'bg-green-100 text-green-700'
                           : metric.utilization_pct >= 75
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-red-100 text-red-700'
                       }`}
                     >
                       {metric.utilization_pct >= 90

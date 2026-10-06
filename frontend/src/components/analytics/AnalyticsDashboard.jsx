@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Factory, Wrench, Clock, AlertTriangle, LayoutDashboard, List, Target, RefreshCw, X } from 'lucide-react';
 import UtilizationCharts from './UtilizationCharts';
 import CategoryBreakdown from './CategoryBreakdown';
 import OptimumRecommendation from './OptimumRecommendation';
@@ -11,26 +10,57 @@ import {
 
 /**
  * AnalyticsDashboard — Person 6, Analytics Module (Main Container)
+ *
+ * Orchestrates all analytics components:
+ *   1. KPI Metric Cards — top-level summary metrics
+ *   2. UtilizationCharts — line charts for utilization vs adjusters
+ *   3. CategoryBreakdown — bar charts for per-category comparison
+ *   4. OptimumRecommendation — staffing optimization display
+ *   5. ExportPanel — CSV/JSON/Print export
+ *
+ * This component receives simulation and optimization results as props from
+ * the parent App (which gets them from Person 4's configurator triggering
+ * Person 3's backend API). It also provides a "Load Demo Data" button for
+ * independent development and testing.
+ *
+ * Props:
+ *   - simulationResults: SimulationResultOutput | null
+ *   - optimizationResults: OptimizationResultOutput | null
  */
 
-function KPICard({ label, value, unit, icon: Icon, subtitle }) {
+/**
+ * KPICard — Displays a single key performance indicator metric.
+ */
+function KPICard({ label, value, unit, icon, color, subtitle }) {
+  const colorClasses = {
+    emerald: 'from-emerald-500 to-emerald-600 shadow-emerald-200',
+    indigo: 'from-indigo-500 to-indigo-600 shadow-indigo-200',
+    amber: 'from-amber-500 to-amber-600 shadow-amber-200',
+    rose: 'from-rose-500 to-rose-600 shadow-rose-200',
+  };
+
   return (
-    <div className="bg-white border border-slate-200 rounded-[6px] p-4 flex flex-col">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[12px] uppercase text-slate-500 font-semibold tracking-wider">{label}</span>
-        <Icon className="w-4 h-4 text-slate-400" />
+    <div
+      className={`bg-gradient-to-br ${
+        colorClasses[color] || colorClasses.emerald
+      } rounded-xl shadow-lg p-5 text-white`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-2xl">{icon}</span>
+        <span className="text-xs uppercase tracking-wider opacity-80">{label}</span>
       </div>
-      <div className="flex items-baseline gap-1 mt-1">
-        <span className="text-[28px] font-semibold text-slate-900" style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {value}
-        </span>
-        {unit && <span className="text-[14px] text-slate-500">{unit}</span>}
+      <div className="flex items-baseline gap-1">
+        <span className="text-3xl font-bold">{value}</span>
+        {unit && <span className="text-sm opacity-80">{unit}</span>}
       </div>
-      {subtitle && <p className="text-[12px] text-slate-400 mt-3 pt-3 border-t border-slate-100">{subtitle}</p>}
+      {subtitle && <p className="text-xs opacity-70 mt-1">{subtitle}</p>}
     </div>
   );
 }
 
+/**
+ * Extract KPI values from simulation results.
+ */
 function useKPIMetrics(simulationResults) {
   return useMemo(() => {
     if (!simulationResults?.summary) {
@@ -52,6 +82,9 @@ function useKPIMetrics(simulationResults) {
   }, [simulationResults]);
 }
 
+/**
+ * Format a number for display, handling null/undefined gracefully.
+ */
 function formatMetric(value, decimals = 1) {
   if (value === null || value === undefined) return '—';
   return typeof value === 'number' ? value.toFixed(decimals) : String(value);
@@ -66,13 +99,17 @@ export default function AnalyticsDashboard({
   simulationResults: propSimResults = null,
   optimizationResults: propOptResults = null,
 }) {
+  // Local state for demo data loading (allows independent development)
   const [demoSimResults, setDemoSimResults] = useState(null);
   const [demoOptResults, setDemoOptResults] = useState(null);
 
+  // Use prop data if available, otherwise fall back to demo data
   const simulationResults = propSimResults || demoSimResults;
   const optimizationResults = propOptResults || demoOptResults;
 
   const kpi = useKPIMetrics(simulationResults);
+
+  // Active tab for chart sections
   const [activeTab, setActiveTab] = useState('overview');
 
   const handleLoadDemoData = useCallback(() => {
@@ -86,9 +123,9 @@ export default function AnalyticsDashboard({
   }, []);
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'categories', label: 'Categories', icon: List },
-    { id: 'optimization', label: 'Optimization', icon: Target },
+    { id: 'overview', label: '📊 Overview', icon: '📊' },
+    { id: 'categories', label: '📋 Categories', icon: '📋' },
+    { id: 'optimization', label: '🎯 Optimization', icon: '🎯' },
   ];
 
   return (
@@ -96,29 +133,27 @@ export default function AnalyticsDashboard({
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Analytics Dashboard</h2>
-          <p className="text-[14px] text-slate-500 mt-1">
+          <h2 className="text-xl font-bold text-gray-800">📊 Analytics Dashboard</h2>
+          <p className="text-sm text-gray-500">
             Simulation metrics, utilization charts, and staffing recommendations
           </p>
         </div>
 
-        {/* Demo Data Controls */}
+        {/* Demo Data Controls (for independent development/testing) */}
         {!propSimResults && !propOptResults && (
           <div className="flex gap-2">
             <button
               onClick={handleLoadDemoData}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-medium rounded-[6px] transition-colors"
+              className="px-4 py-2 bg-factory-accent hover:bg-factory-dark text-white text-sm rounded-lg transition-colors shadow-sm"
             >
-              <RefreshCw className="w-4 h-4" />
-              Load Demo Data
+              🔄 Load Demo Data
             </button>
             {(demoSimResults || demoOptResults) && (
               <button
                 onClick={handleClearData}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[14px] font-medium rounded-[6px] transition-colors"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm rounded-lg transition-colors"
               >
-                <X className="w-4 h-4" />
-                Clear
+                ✕ Clear
               </button>
             )}
           </div>
@@ -131,56 +166,55 @@ export default function AnalyticsDashboard({
           label="Machine Utilization"
           value={formatMetric(kpi.machineUtil)}
           unit="%"
-          icon={Factory}
+          icon="🏭"
+          color="emerald"
           subtitle="Overall machine uptime percentage"
         />
         <KPICard
           label="Adjuster Utilization"
           value={formatMetric(kpi.adjusterUtil)}
           unit="%"
-          icon={Wrench}
+          icon="🔧"
+          color="indigo"
           subtitle="Overall adjuster busy time"
         />
         <KPICard
           label="Avg Wait Time"
           value={formatMetric(kpi.avgWaitTime, 2)}
           unit="units"
-          icon={Clock}
+          icon="⏱️"
+          color="amber"
           subtitle="Average queue wait time"
         />
         <KPICard
           label="Failures Handled"
           value={formatCount(kpi.totalFailures)}
           unit=""
-          icon={AlertTriangle}
+          icon="🔩"
+          color="rose"
           subtitle="Total repairs completed"
         />
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-slate-200">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-[14px] font-medium transition-colors border-b-2 -mb-px ${
-                isActive
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="flex border-b border-gray-200">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === tab.id
+                ? 'border-factory-highlight text-factory-highlight'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
-      <div className="pt-2">
+      <div>
         {activeTab === 'overview' && (
           <UtilizationCharts
             tradeoffCurve={optimizationResults?.tradeoff_curve}
@@ -197,7 +231,7 @@ export default function AnalyticsDashboard({
         )}
       </div>
 
-      {/* Export Panel */}
+      {/* Export Panel — always visible */}
       <ExportPanel
         simulationResults={simulationResults}
         optimizationResults={optimizationResults}
