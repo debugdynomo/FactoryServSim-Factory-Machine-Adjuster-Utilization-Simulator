@@ -66,61 +66,63 @@ export default function AuthPage({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-2">
-            <Factory className="w-10 h-10 text-blue-400" />
-            <h1 className="text-3xl font-bold text-white">FactoryServSim</h1>
+          <div className="inline-flex items-center justify-center gap-3 mb-2">
+            <div className="bg-white p-3 border border-slate-200 shadow-sm rounded-xl">
+              <Factory className="w-8 h-8 text-slate-700" />
+            </div>
           </div>
-          <p className="text-slate-400 text-sm">
-            Factory Machine-Adjuster Utilization Simulator
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight mt-4">FactoryServSim</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Sign in to manage your factory configuration
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-bold text-white mb-6 text-center">
-            {isRegister ? 'Register New Factory Account' : 'Factory Login'}
+        <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900 mb-6">
+            {isRegister ? 'Register Account' : 'Welcome back'}
           </h2>
 
           {/* Server wake-up status */}
           {!serverReady && (
-            <div className="mb-4 p-3 bg-amber-900/50 border border-amber-700 rounded-lg text-amber-300 text-sm flex items-center gap-2">
-              <Loader className="w-4 h-4 flex-shrink-0 animate-spin" />
-              Waking up server... You can start filling in your details.
+            <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-800 text-sm flex items-center gap-2">
+              <Loader className="w-4 h-4 flex-shrink-0 animate-spin text-amber-600" />
+              Waking up server... you can start typing.
             </div>
           )}
 
           {successMsg && (
-            <div className="mb-4 p-3 bg-emerald-900/50 border border-emerald-700 rounded-lg text-emerald-300 text-sm flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <div className="mb-6 p-3 bg-emerald-50 border border-emerald-200 rounded-md text-emerald-800 text-sm flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 flex-shrink-0 text-emerald-600" />
               {successMsg}
             </div>
           )}
 
           {error && (
-            <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm">
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Factory ID — always shown */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Factory ID */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Factory ID
               </label>
               <div className="relative">
-                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   value={factoryId}
                   onChange={(e) => setFactoryId(e.target.value.toUpperCase())}
                   placeholder="e.g. FAC001"
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                 />
               </div>
             </div>
@@ -129,35 +131,35 @@ export default function AuthPage({ onLoginSuccess }) {
             {isRegister && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     Factory Name
                   </label>
                   <div className="relative">
-                    <Factory className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Factory className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
                       value={factoryName}
                       onChange={(e) => setFactoryName(e.target.value)}
                       placeholder="e.g. Pune Manufacturing Plant"
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     Manager Name
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
                       value={managerName}
                       onChange={(e) => setManagerName(e.target.value)}
                       placeholder="e.g. Rajesh Kumar"
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -166,37 +168,37 @@ export default function AuthPage({ onLoginSuccess }) {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Manager Email
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="manager@factory.com"
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                 />
               </div>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimum 6 characters"
+                  placeholder="••••••••"
                   required
                   minLength={6}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                 />
               </div>
             </div>
@@ -204,40 +206,29 @@ export default function AuthPage({ onLoginSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+              className="w-full mt-2 flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium rounded-md shadow-sm transition-colors"
             >
               {loading ? (
-                <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                <span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" />
               ) : isRegister ? (
-                <>
-                  <UserPlus className="w-4 h-4" />
-                  Create Factory Account
-                </>
+                'Create Account'
               ) : (
-                <>
-                  <LogIn className="w-4 h-4" />
-                  Sign In
-                </>
+                'Sign In'
               )}
             </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={switchMode}
-              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              {isRegister
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Register your factory"}
-            </button>
-          </div>
         </div>
 
-        {/* Info note */}
-        <p className="text-center text-xs text-slate-600 mt-4">
-          Data is stored per Factory ID. When a manager changes, factory data persists.
-        </p>
+        <div className="mt-6 text-center">
+          <button
+            onClick={switchMode}
+            className="text-sm text-slate-500 hover:text-slate-800 transition-colors"
+          >
+            {isRegister
+              ? 'Already have an account? Sign in'
+              : "Don't have an account? Register"}
+          </button>
+        </div>
       </div>
     </div>
   );
