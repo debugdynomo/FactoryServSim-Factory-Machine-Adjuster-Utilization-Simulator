@@ -5,7 +5,7 @@ import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import ManagerHistoryPanel from './components/analytics/ManagerHistoryPanel';
 import AuthPage from './components/auth/AuthPage';
 import { getToken, getStoredUser, logoutUser } from './api/authApi';
-import { LogOut, User, Factory, Settings, BarChart3, Eye, ChevronLeft, Menu, ClipboardList } from 'lucide-react';
+import { LogOut, User, Factory, Settings, BarChart3, Eye, ChevronLeft, Menu, ClipboardList, Sliders, LayoutDashboard, Activity, History, Cpu } from 'lucide-react';
 
 /**
  * FactoryServSim — Professional Dashboard with Sidebar Navigation
@@ -141,10 +141,10 @@ export default function App() {
   const hasResults = !!simulationResults || !!optimizationResults;
 
   const navItems = [
-    { id: 'config', label: 'Setup', icon: Settings, always: true },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, always: false, needs: hasResults },
-    { id: 'visualizer', label: 'Live Floor', icon: Eye, always: false, needs: !!simulationResults },
-    { id: 'history', label: 'History', icon: ClipboardList, always: true },
+    { id: 'config', label: 'Setup', icon: Sliders, always: true },
+    { id: 'analytics', label: 'Analytics', icon: LayoutDashboard, always: false, needs: hasResults },
+    { id: 'visualizer', label: 'Live Floor', icon: Activity, always: false, needs: !!simulationResults },
+    { id: 'history', label: 'History', icon: History, always: true },
   ];
 
   return (
@@ -158,11 +158,13 @@ export default function App() {
         {/* Sidebar Header */}
         <div className={`flex items-center h-16 border-b border-slate-800 px-4 ${sidebarOpen ? 'justify-between' : 'justify-center'}`}>
           {sidebarOpen && (
-            <div className="flex items-center gap-2 overflow-hidden">
-              <span className="text-2xl">🏭</span>
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-600/20">
+                <Cpu className="w-5 h-5 text-white" />
+              </div>
               <div className="min-w-0">
-                <h1 className="text-sm font-bold text-white truncate">FactoryServSim</h1>
-                <p className="text-[10px] text-slate-500 truncate">Machine-Adjuster Simulator</p>
+                <h1 className="text-sm font-bold text-white truncate">{user?.factory_name || 'Factory Dashboard'}</h1>
+                <p className="text-[10px] text-slate-400 truncate uppercase tracking-wider font-semibold">ID: {user?.factory_id || 'FAC001'}</p>
               </div>
             </div>
           )}
@@ -173,19 +175,6 @@ export default function App() {
             {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
-
-        {/* Factory Badge */}
-        {sidebarOpen && (
-          <div className="px-3 py-3 border-b border-slate-800">
-            <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2">
-              <Factory className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-white truncate">{user?.factory_name || 'Factory'}</p>
-                <p className="text-[10px] text-slate-500 font-mono">{user?.factory_id || ''}</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Nav Items */}
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
