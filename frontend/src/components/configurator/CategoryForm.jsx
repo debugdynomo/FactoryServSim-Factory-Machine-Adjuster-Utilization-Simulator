@@ -191,7 +191,7 @@ export default function CategoryForm({ categories, onChange }) {
             htmlFor="category-mttf"
             className="mb-1 block text-sm font-medium text-slate-700"
           >
-            MTTF
+            MTTF (seconds)
           </label>
 
           <input
@@ -219,7 +219,7 @@ export default function CategoryForm({ categories, onChange }) {
             htmlFor="category-repair"
             className="mb-1 block text-sm font-medium text-slate-700"
           >
-            Mean repair time
+            Mean repair time (seconds)
           </label>
 
           <input
@@ -284,10 +284,10 @@ export default function CategoryForm({ categories, onChange }) {
                   Count
                 </th>
                 <th className="px-3 py-3 font-medium">
-                  MTTF
+                  MTTF (sec)
                 </th>
                 <th className="px-3 py-3 font-medium">
-                  Repair Time
+                  Repair Time (sec)
                 </th>
                 <th className="px-3 py-3 text-right font-medium">
                   Actions
