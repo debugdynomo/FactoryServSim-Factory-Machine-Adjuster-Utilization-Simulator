@@ -13,6 +13,10 @@ export default function ConfigSummary({
     0,
   );
 
+  const uncoveredCategories = categories
+    .filter(cat => cat.name && !adjusters.some(adj => adj.expertise.includes(cat.name)))
+    .map(cat => cat.name);
+
   const canRun =
     Number(simulationTime) > 0 &&
     categories.length > 0 &&
@@ -78,6 +82,15 @@ export default function ConfigSummary({
       {error && (
         <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {uncoveredCategories.length > 0 && (
+        <div className="mt-4 flex rounded-lg bg-amber-50 p-3 text-sm text-amber-800 border border-amber-200">
+          <span className="mr-2">⚠️</span>
+          <div>
+            <strong>Coverage Gap Warning:</strong> The following machine categories have no adjuster with matching expertise: {uncoveredCategories.join(', ')}. Machines in these categories will not be repaired during simulation.
+          </div>
         </div>
       )}
 

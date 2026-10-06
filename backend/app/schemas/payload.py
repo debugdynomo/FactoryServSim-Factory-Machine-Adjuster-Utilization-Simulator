@@ -298,6 +298,14 @@ class TradeoffPoint(BaseModel):
     )
 
 
+class RecommendedNewProfile(BaseModel):
+    """A recommended new adjuster profile to hire for uncovered categories."""
+    name: str = Field(..., description="Suggested name for the new adjuster profile")
+    expertise: List[str] = Field(..., description="Machine categories this profile should cover")
+    count: int = Field(..., ge=1, description="Number of adjusters of this profile to hire")
+    reason: str = Field(..., description="Why this profile is needed")
+
+
 class OptimizationResultOutput(BaseModel):
     """
     Staffing optimization result response.
@@ -327,6 +335,18 @@ class OptimizationResultOutput(BaseModel):
         default=None,
         description="Recommended staffing count for each adjuster profile (e.g. {'Adjuster 1': 2, 'Adjuster 2': 4})",
     )
+    coverage_gaps: Optional[List[str]] = Field(
+        default=None,
+        description="Machine categories that have NO adjuster with matching expertise (e.g. ['Lathe', 'Welding'])",
+    )
+    recommended_new_profiles: Optional[List[RecommendedNewProfile]] = Field(
+        default=None,
+        description="Suggested new adjuster profiles to hire for uncovered machine categories",
+    )
+    adjuster_expertise_map: Optional[dict] = Field(
+        default=None,
+        description="Map of adjuster profile name to their expertise list (e.g. {'Adjuster 1': ['Lathe', 'Turning']})",
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -344,6 +364,8 @@ class OptimizationResultOutput(BaseModel):
                         "Adding 2 more adjusters yields only +1.3% uptime at 64% worker utilization."
                     ),
                     "per_category_adjusters": {"Lathe": 3, "Drilling": 2, "Soldering": 1},
+                    "coverage_gaps": [],
+                    "recommended_new_profiles": [],
                 }
             ]
         }

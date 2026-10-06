@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Target, Lightbulb, Activity, CheckCircle, TrendingUp, List } from 'lucide-react';
+import { Target, Lightbulb, Activity, CheckCircle, TrendingUp, List, AlertTriangle, ShieldAlert, Plus } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -27,7 +27,10 @@ import {
  *   - optimizationResults: {
  *       optimum_adjuster_count: number,
  *       tradeoff_curve: Array<{ adjuster_count, machine_utilization, adjuster_utilization }>,
- *       recommendation_reason: string
+ *       recommendation_reason: string,
+ *       coverage_gaps: string[],
+ *       recommended_new_profiles: Array<{name, expertise: string[], count, reason}>,
+ *       adjuster_expertise_map: {[adjusterName]: string[]}
  *     }
  */
 
@@ -95,6 +98,9 @@ export default function OptimumRecommendation({ optimizationResults }) {
     optimum_adjuster_count: optimumCount = null,
     tradeoff_curve: tradeoffCurve = [],
     recommendation_reason: reason = '',
+    coverage_gaps = [],
+    recommended_new_profiles = [],
+    adjuster_expertise_map = {},
   } = optimizationResults || {};
 
   const efficiencyData = useEfficiencyData(tradeoffCurve, optimumCount);
@@ -118,6 +124,62 @@ export default function OptimumRecommendation({ optimizationResults }) {
 
   return (
     <div className="space-y-6">
+      {/* Coverage Gap Alert (CRITICAL) */}
+      {coverage_gaps && coverage_gaps.length > 0 && (
+        <div className="bg-rose-50 border-l-4 border-rose-500 rounded-r-xl shadow-sm p-5 flex items-start gap-4">
+          <ShieldAlert className="text-rose-500 flex-shrink-0 mt-0.5" size={24} />
+          <div>
+            <h3 className="text-rose-800 font-bold text-lg mb-1 flex items-center gap-2">
+              CRITICAL: Coverage Gap Detected
+            </h3>
+            <p className="text-rose-700 text-sm mb-2">
+              {coverage_gaps.length} machine categor{coverage_gaps.length > 1 ? 'ies' : 'y'} {coverage_gaps.length !== 1 ? 'have' : 'has'} no adjuster with matching expertise. Machines in these categories will remain broken indefinitely.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {coverage_gaps.map((gap) => (
+                <span key={gap} className="bg-rose-100 text-rose-800 text-xs font-semibold px-2.5 py-1 rounded-md border border-rose-200">
+                  {gap}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recommended New Hires */}
+      {recommended_new_profiles && recommended_new_profiles.length > 0 && (
+        <div className="bg-emerald-50 rounded-xl shadow-sm border border-emerald-100 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Plus className="text-emerald-600 bg-emerald-100 rounded-full p-1" size={24} />
+            <h3 className="text-lg font-bold text-emerald-800">
+              🔧 Recommended New Hires
+            </h3>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+            {recommended_new_profiles.map((profile, idx) => (
+              <div key={idx} className="bg-white rounded-lg p-4 border border-emerald-100 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-bold text-slate-800 text-lg">{profile.name}</h4>
+                    <span className="bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-full text-sm">
+                      Hire {profile.count}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {profile.expertise && profile.expertise.map((exp) => (
+                      <span key={exp} className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                        {exp}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-sm text-slate-600">{profile.reason}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recommendation Hero Card */}
       <div className="bg-slate-900 rounded-xl shadow-md border border-slate-800 p-8 text-white relative overflow-hidden">
         {/* Background decorative elements */}
@@ -239,24 +301,37 @@ export default function OptimumRecommendation({ optimizationResults }) {
               ([adjusterName, count]) => (
                 <div
                   key={adjusterName}
-                  className="flex items-center justify-between rounded-xl border-2 border-indigo-100 bg-indigo-50/50 p-4 shadow-sm"
+                  className="flex flex-col justify-between rounded-xl border-2 border-indigo-100 bg-indigo-50/50 p-4 shadow-sm"
                 >
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
-                      Role Profile
-                    </span>
-                    <p className="mt-1 text-base font-bold text-slate-900">
-                      {adjusterName}
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      Hire / Assign:{' '}
-                      <span className="font-semibold text-indigo-700">
-                        {count} required
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
+                        Role Profile
                       </span>
-                    </p>
-                  </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white font-extrabold text-xl shadow-md">
-                    {count}
+                      <p className="mt-1 text-base font-bold text-slate-900">
+                        {adjusterName}
+                      </p>
+                      
+                      {adjuster_expertise_map[adjusterName] && (
+                        <div className="flex flex-wrap gap-1 mt-1 mb-2">
+                          {adjuster_expertise_map[adjusterName].map((exp) => (
+                            <span key={exp} className="bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              {exp}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <p className="text-sm text-slate-600 mt-1">
+                        Hire / Assign:{' '}
+                        <span className="font-semibold text-indigo-700">
+                          {count} required
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white font-extrabold text-xl shadow-md ml-2">
+                      {count}
+                    </div>
                   </div>
                 </div>
               )

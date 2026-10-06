@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.payload import (
     FactoryConfigInput,
     OptimizationResultOutput,
+    RecommendedNewProfile,
     TradeoffPoint,
 )
 
@@ -134,8 +135,23 @@ def _generate_mock_optimization_result(
             f"and adjuster utilization for this factory configuration."
         )
 
+    # -----------------------------------------------------------------------
+    # Coverage gap detection: find machine categories with NO adjuster coverage
+    # -----------------------------------------------------------------------
+    all_category_names = {cat.name for cat in payload.machine_categories}
+    covered_categories = set()
+    for adj in payload.adjusters:
+        for exp in adj.expertise:
+            covered_categories.add(exp)
+    coverage_gaps = sorted(all_category_names - covered_categories)
+
+    # Build adjuster expertise map for frontend display
+    adjuster_expertise_map = {adj.name: list(adj.expertise) for adj in payload.adjusters}
+
+    # -----------------------------------------------------------------------
     # Calculate per-category adjuster distribution
     # Distribute optimum adjusters proportionally based on machine count * failure rate
+    # -----------------------------------------------------------------------
     total_weight = sum(cat.count / cat.mttf for cat in payload.machine_categories)
     per_category = {}
     allocated = 0
@@ -147,55 +163,111 @@ def _generate_mock_optimization_result(
     for i, cat in enumerate(sorted_cats):
         weight = (cat.count / cat.mttf) / total_weight if total_weight > 0 else 1.0 / len(sorted_cats)
         if i == len(sorted_cats) - 1:
-            # Last category gets the remainder
             per_category[cat.name] = max(1, optimum_count - allocated)
         else:
             count = max(1, round(optimum_count * weight))
             per_category[cat.name] = count
             allocated += count
 
-    # Calculate per-adjuster distribution across the provided adjuster types/profiles
+    # -----------------------------------------------------------------------
+    # Calculate per-adjuster distribution — only assign work to profiles
+    # that have matching expertise (don't give Lathe work to Drilling-only adjuster)
+    # -----------------------------------------------------------------------
     per_adjuster = {}
     if payload.adjusters:
-        num_profiles = len(payload.adjusters)
-        # Compute how many machines each adjuster profile is qualified to service
-        profile_workloads = {}
-        for adj in payload.adjusters:
-            workload = sum(
-                (cat.count / cat.mttf)
-                for cat in payload.machine_categories
-                if cat.name in adj.expertise
+        # Only consider categories that are covered by at least one adjuster
+        covered_cats = [cat for cat in payload.machine_categories if cat.name in covered_categories]
+        
+        if covered_cats:
+            # Compute workload only for covered categories
+            profile_workloads = {}
+            for adj in payload.adjusters:
+                workload = sum(
+                    (cat.count / cat.mttf)
+                    for cat in covered_cats
+                    if cat.name in adj.expertise
+                )
+                profile_workloads[adj.name] = max(workload, 0.01)
+
+            total_workload = sum(profile_workloads.values())
+
+            # Adjusters needed just for covered categories
+            covered_rho = sum(
+                cat.count * cat.mean_repair_time / cat.mttf
+                for cat in covered_cats
             )
-            profile_workloads[adj.name] = max(workload, 0.1)
+            covered_optimum = max(1, math.ceil(covered_rho * 1.3))  # 30% buffer
 
-        total_workload = sum(profile_workloads.values())
-        adj_allocated = 0
-        sorted_profiles = sorted(
-            payload.adjusters,
-            key=lambda a: profile_workloads[a.name],
-            reverse=True,
+            adj_allocated = 0
+            num_profiles = len(payload.adjusters)
+            sorted_profiles = sorted(
+                payload.adjusters,
+                key=lambda a: profile_workloads[a.name],
+                reverse=True,
+            )
+
+            for j, adj in enumerate(sorted_profiles):
+                if j == num_profiles - 1:
+                    remainder = max(1, covered_optimum - adj_allocated)
+                    per_adjuster[adj.name] = remainder
+                else:
+                    share = profile_workloads[adj.name] / total_workload
+                    alloc = max(1, round(covered_optimum * share))
+                    max_allowed = covered_optimum - adj_allocated - (num_profiles - 1 - j)
+                    alloc = min(alloc, max(1, max_allowed))
+                    per_adjuster[adj.name] = alloc
+                    adj_allocated += alloc
+        else:
+            # No covered categories at all — assign 1 each as placeholder
+            for adj in payload.adjusters:
+                per_adjuster[adj.name] = 1
+
+    # -----------------------------------------------------------------------
+    # Generate recommended new profiles for uncovered categories
+    # -----------------------------------------------------------------------
+    recommended_new_profiles = []
+    gap_adjuster_total = 0
+    for gap_cat_name in coverage_gaps:
+        gap_cat = next((c for c in payload.machine_categories if c.name == gap_cat_name), None)
+        if gap_cat:
+            # Calculate how many adjusters are needed for this uncovered category
+            cat_rho = gap_cat.count * gap_cat.mean_repair_time / gap_cat.mttf
+            needed = max(1, math.ceil(cat_rho * 1.3))
+            gap_adjuster_total += needed
+            recommended_new_profiles.append(
+                RecommendedNewProfile(
+                    name=f"{gap_cat_name} Specialist",
+                    expertise=[gap_cat_name],
+                    count=needed,
+                    reason=f"{gap_cat.count} {gap_cat_name} machines have no adjuster coverage. "
+                           f"Failure rate: {gap_cat.count}/{gap_cat.mttf:.0f} = {gap_cat.count/gap_cat.mttf:.1f} failures/unit-time. "
+                           f"Estimated {needed} adjuster(s) needed.",
+                )
+            )
+
+    # Update the total optimum to include gap adjusters
+    total_optimum = (sum(per_adjuster.values()) if per_adjuster else optimum_count) + gap_adjuster_total
+
+    # -----------------------------------------------------------------------
+    # Enhance recommendation reason with coverage warnings
+    # -----------------------------------------------------------------------
+    if coverage_gaps:
+        gap_warning = (
+            f" ⚠️ COVERAGE GAP: {', '.join(coverage_gaps)} machine(s) have NO adjuster "
+            f"with matching expertise. {gap_adjuster_total} additional specialist adjuster(s) "
+            f"are recommended to cover these categories."
         )
-
-        for j, adj in enumerate(sorted_profiles):
-            if j == num_profiles - 1:
-                # Last adjuster profile gets the exact remainder to ensure sum equals optimum_count
-                remainder = max(1, optimum_count - adj_allocated)
-                per_adjuster[adj.name] = remainder
-            else:
-                share = profile_workloads[adj.name] / total_workload
-                alloc = max(1, round(optimum_count * share))
-                # Don't exceed total minus remaining slots
-                max_allowed = optimum_count - adj_allocated - (num_profiles - 1 - j)
-                alloc = min(alloc, max(1, max_allowed))
-                per_adjuster[adj.name] = alloc
-                adj_allocated += alloc
+        reason += gap_warning
 
     return OptimizationResultOutput(
-        optimum_adjuster_count=optimum_count,
+        optimum_adjuster_count=total_optimum,
         tradeoff_curve=tradeoff_curve,
         recommendation_reason=reason,
         per_category_adjusters=per_category,
         per_adjuster_counts=per_adjuster if per_adjuster else None,
+        coverage_gaps=coverage_gaps if coverage_gaps else None,
+        recommended_new_profiles=recommended_new_profiles if recommended_new_profiles else None,
+        adjuster_expertise_map=adjuster_expertise_map if adjuster_expertise_map else None,
     )
 
 
@@ -266,6 +338,9 @@ async def optimize_staffing(
                 recommendation_reason=result.recommendation_reason,
                 per_category_adjusters=getattr(result, "per_category_adjusters", None) or mock_supplement.per_category_adjusters,
                 per_adjuster_counts=getattr(result, "per_adjuster_counts", None) or mock_supplement.per_adjuster_counts,
+                coverage_gaps=mock_supplement.coverage_gaps,
+                recommended_new_profiles=mock_supplement.recommended_new_profiles,
+                adjuster_expertise_map=mock_supplement.adjuster_expertise_map,
             )
         except Exception as e:
             logger.error("Optimizer engine error: %s", str(e))

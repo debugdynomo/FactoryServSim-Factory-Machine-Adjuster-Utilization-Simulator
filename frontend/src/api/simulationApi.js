@@ -140,5 +140,11 @@ export function getMockOptimizationResults() {
       'Adjuster 1': 2,
       'Adjuster 2': 4,
     },
+    coverage_gaps: null,
+    recommended_new_profiles: null,
+    adjuster_expertise_map: {
+      'Adjuster 1': ['Lathe', 'Turning'],
+      'Adjuster 2': ['Drilling', 'Soldering'],
+    },
   };
 }
