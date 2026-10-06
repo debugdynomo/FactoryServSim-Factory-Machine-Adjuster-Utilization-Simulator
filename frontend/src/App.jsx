@@ -250,25 +250,7 @@ export default function App() {
         }`}
       >
         <div className="min-h-screen bg-slate-50">
-          {/* Top bar */}
-          <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200">
-            <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  {activePage === 'config' && '⚙️ Setup Configuration'}
-                  {activePage === 'analytics' && '📊 Analytics & Results'}
-                  {activePage === 'visualizer' && '🏭 Live Factory Floor'}
-                  {activePage === 'history' && '📋 Report History'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  {activePage === 'config' && 'Configure machines, adjusters, and run analysis'}
-                  {activePage === 'analytics' && 'View simulation results and optimization insights'}
-                  {activePage === 'visualizer' && 'Real-time factory floor state visualization'}
-                  {activePage === 'history' && 'Browse and reload past simulation & optimization runs'}
-                </p>
-              </div>
-            </div>
-          </header>
+
 
           {/* Page Content */}
           <div className="max-w-7xl mx-auto px-6 py-6">
