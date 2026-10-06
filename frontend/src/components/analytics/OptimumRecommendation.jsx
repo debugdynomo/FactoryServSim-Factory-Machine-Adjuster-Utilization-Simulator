@@ -245,48 +245,6 @@ export default function OptimumRecommendation({ optimizationResults }) {
         )}
       </div>
 
-      {/* Per-Category Adjuster Staffing Report */}
-      {optimizationResults?.per_category_adjusters && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">
-            📋 Recommended Adjusters Per Category
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Breakdown of how many adjusters are needed for each machine category based on failure rates and machine counts.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Object.entries(optimizationResults.per_category_adjusters).map(
-              ([category, count]) => (
-                <div
-                  key={category}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">
-                      {category}
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {count}{' '}
-                      <span className="text-sm font-normal text-slate-500">
-                        adjuster{count !== 1 ? 's' : ''}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold text-lg">
-                    {count}
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-3">
-            <span className="text-emerald-600 font-semibold text-sm">
-              Total Recommended: {optimumCount} adjuster{optimumCount !== 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Per-Adjuster Staffing Breakdown */}
       {optimizationResults?.per_adjuster_counts && (
         <div className="bg-white rounded-xl shadow-md p-6">
