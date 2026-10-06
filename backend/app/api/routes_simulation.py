@@ -72,10 +72,22 @@ def _generate_mock_simulation_result(payload: FactoryConfigInput) -> SimulationR
     num_adjusters = len(payload.adjusters)
 
     # Generate plausible mock metrics based on input ratios
-    # More adjusters per machine -> higher machine utilization, lower adjuster utilization
-    ratio = num_adjusters / max(total_machines, 1)
-    machine_util = min(98.0, 50.0 + ratio * 5000)
-    adjuster_util = max(20.0, 99.0 - ratio * 1000)
+    # Queueing theory: offered load = sum(count * mean_repair_time / mttf)
+    rho = sum(cat.count * cat.mean_repair_time / cat.mttf for cat in payload.machine_categories)
+    avg_repair = sum(cat.count * cat.mean_repair_time for cat in payload.machine_categories) / max(total_machines, 1)
+    avg_mttf = sum(cat.count * cat.mttf for cat in payload.machine_categories) / max(total_machines, 1)
+
+    if num_adjusters >= rho and rho > 0:
+        excess = num_adjusters - rho
+        wait_factor = rho / (excess + rho) if (excess + rho) > 0 else 1.0
+        effective_downtime = avg_repair * (1 + wait_factor)
+        machine_util = min(99.5, (avg_mttf / (avg_mttf + effective_downtime)) * 100)
+    elif rho > 0:
+        machine_util = min(95.0, max(10.0, (num_adjusters / rho) * 80.0))
+    else:
+        machine_util = 99.5
+
+    adjuster_util = min(99.0, max(5.0, (rho / max(num_adjusters, 1)) * 100))
 
     category_metrics = []
     total_failures = 0
@@ -83,7 +95,7 @@ def _generate_mock_simulation_result(payload: FactoryConfigInput) -> SimulationR
         # Estimate failures: sim_time / mttf * count (approximate)
         est_failures = int(payload.simulation_time / cat.mttf * cat.count * 0.5)
         # Higher MTTF -> higher utilization
-        cat_util = min(99.0, 100.0 - (cat.mean_repair_time / cat.mttf) * 100)
+        cat_util = min(99.0, (cat.mttf / (cat.mttf + cat.mean_repair_time)) * 100)
         category_metrics.append(
             CategoryMetrics(
                 category=cat.name,
@@ -100,12 +112,18 @@ def _generate_mock_simulation_result(payload: FactoryConfigInput) -> SimulationR
             AdjusterMetrics(
                 id=adj.id,
                 name=adj.name,
-                busy_time_pct=round(adjuster_util + (adj.id % 3) * 0.5, 2),
+                busy_time_pct=round(min(99.0, adjuster_util + (adj.id % 3) * 0.5), 2),
                 repairs_completed=repairs_per_adjuster + (adj.id * 10),
             )
         )
 
-    avg_wait = max(0.1, (1.0 - ratio * 100) * 5) if ratio < 0.01 else 0.5
+    # Average wait time based on queue theory
+    if num_adjusters > rho and rho > 0:
+        avg_wait = round(avg_repair * rho / (num_adjusters - rho), 2)
+    elif rho > 0:
+        avg_wait = round(avg_repair * 5, 2)  # heavily understaffed
+    else:
+        avg_wait = 0.1
 
     return SimulationResultOutput(
         summary=SummaryMetrics(
@@ -128,9 +146,39 @@ async def run_simulation(payload: FactoryConfigInput) -> SimulationResultOutput:
     Accepts a FactoryConfigInput payload and returns SimulationResultOutput
     containing summary metrics, per-category metrics, and per-adjuster metrics.
 
+    Validates adjuster business rules:
+    - Adjuster names must be unique
+    - No two adjusters can have the exact same expertise set
+
     Integration: Delegates to Person 1's DES engine when available,
     otherwise returns intelligent mock data.
     """
+    # --- Adjuster Validation ---
+    # Rule 1: No duplicate adjuster names
+    seen_names = set()
+    for adj in payload.adjusters:
+        if adj.name.lower() in seen_names:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Duplicate adjuster name: '{adj.name}'. Each adjuster must have a unique name.",
+            )
+        seen_names.add(adj.name.lower())
+
+    # Rule 2: No two adjusters can have the exact same expertise set
+    seen_expertise = []
+    for adj in payload.adjusters:
+        expertise_set = frozenset(e.lower() for e in adj.expertise)
+        if expertise_set in seen_expertise:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Adjuster '{adj.name}' has the same expertise set "
+                    f"{sorted(adj.expertise)} as another adjuster. "
+                    f"No two adjusters can share the exact same expertise combination."
+                ),
+            )
+        seen_expertise.append(expertise_set)
+
     logger.info(
         "Simulation requested: sim_time=%d, categories=%d, adjusters=%d",
         payload.simulation_time,
@@ -188,10 +236,10 @@ async def get_presets() -> Dict[str, Any]:
                 "description": "Standard automotive manufacturing with 200 Lathes, 50 Turning, 80 Drilling, 30 Soldering machines",
                 "simulation_time": 10000,
                 "machine_categories": [
-                    {"name": "Lathe", "count": 200, "mttf": 100, "mean_repair_time": 10},
-                    {"name": "Turning", "count": 50, "mttf": 150, "mean_repair_time": 12},
-                    {"name": "Drilling", "count": 80, "mttf": 80, "mean_repair_time": 8},
-                    {"name": "Soldering", "count": 30, "mttf": 200, "mean_repair_time": 15},
+                    {"name": "Lathe", "count": 200, "mttf": 2000, "mean_repair_time": 5},
+                    {"name": "Turning", "count": 50, "mttf": 3000, "mean_repair_time": 6},
+                    {"name": "Drilling", "count": 80, "mttf": 1600, "mean_repair_time": 4},
+                    {"name": "Soldering", "count": 30, "mttf": 4000, "mean_repair_time": 7},
                 ],
                 "adjusters": [
                     {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Turning"]},
@@ -205,8 +253,8 @@ async def get_presets() -> Dict[str, Any]:
                 "description": "Small-scale workshop with 20 Lathes, 10 Drilling machines",
                 "simulation_time": 5000,
                 "machine_categories": [
-                    {"name": "Lathe", "count": 20, "mttf": 120, "mean_repair_time": 8},
-                    {"name": "Drilling", "count": 10, "mttf": 90, "mean_repair_time": 6},
+                    {"name": "Lathe", "count": 20, "mttf": 2400, "mean_repair_time": 4},
+                    {"name": "Drilling", "count": 10, "mttf": 1800, "mean_repair_time": 3},
                 ],
                 "adjusters": [
                     {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Drilling"]},
@@ -218,11 +266,11 @@ async def get_presets() -> Dict[str, Any]:
                 "description": "Large-scale factory with high machine counts and diverse categories",
                 "simulation_time": 20000,
                 "machine_categories": [
-                    {"name": "Lathe", "count": 500, "mttf": 80, "mean_repair_time": 12},
-                    {"name": "Turning", "count": 200, "mttf": 120, "mean_repair_time": 10},
-                    {"name": "Drilling", "count": 300, "mttf": 100, "mean_repair_time": 9},
-                    {"name": "Soldering", "count": 150, "mttf": 180, "mean_repair_time": 14},
-                    {"name": "Welding", "count": 100, "mttf": 60, "mean_repair_time": 20},
+                    {"name": "Lathe", "count": 500, "mttf": 1600, "mean_repair_time": 6},
+                    {"name": "Turning", "count": 200, "mttf": 2400, "mean_repair_time": 5},
+                    {"name": "Drilling", "count": 300, "mttf": 2000, "mean_repair_time": 4},
+                    {"name": "Soldering", "count": 150, "mttf": 3600, "mean_repair_time": 7},
+                    {"name": "Welding", "count": 100, "mttf": 1200, "mean_repair_time": 10},
                 ],
                 "adjusters": [
                     {"id": 1, "name": "Adjuster 1", "expertise": ["Lathe", "Turning"]},

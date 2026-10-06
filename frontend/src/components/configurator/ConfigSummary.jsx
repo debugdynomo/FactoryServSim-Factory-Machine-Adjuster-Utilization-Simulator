@@ -1,12 +1,10 @@
 import React from 'react';
-import { Cpu, Users, Clock, CheckCircle2, Play, Activity } from 'lucide-react';
 
 export default function ConfigSummary({
   simulationTime,
   categories,
   adjusters,
-  onSimulation,
-  onOptimization,
+  onRunAnalysis,
   loading,
   error,
 }) {
@@ -29,97 +27,81 @@ export default function ConfigSummary({
     adjusters.every((adjuster) => adjuster.expertise.length > 0);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-      <div className="mb-6 flex items-start gap-3 border-b border-slate-100 pb-4">
-        <div className="mt-1 rounded-md bg-emerald-100 p-2 text-emerald-700">
-          <CheckCircle2 className="h-5 w-5" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">
-            Configuration Summary
-          </h2>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Review your factory parameters before executing tasks.
-          </p>
-        </div>
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-5">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Configuration Summary
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Review the configuration before running the full analysis.
+        </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="flex flex-col justify-center rounded-xl bg-slate-900 p-5 text-white shadow-inner">
-          <div className="flex items-center gap-2 mb-2">
-            <Cpu className="h-4 w-4 text-amber-500" />
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Machine Categories
-            </p>
-          </div>
-          <p className="text-3xl font-extrabold">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Machine categories
+          </p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
             {categories.length}
           </p>
         </div>
 
-        <div className="flex flex-col justify-center rounded-xl bg-slate-900 p-5 text-white shadow-inner">
-          <div className="flex items-center gap-2 mb-2">
-            <Activity className="h-4 w-4 text-amber-500" />
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Total Machines
-            </p>
-          </div>
-          <p className="text-3xl font-extrabold">
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Total machines
+          </p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
             {totalMachines}
           </p>
         </div>
 
-        <div className="flex flex-col justify-center rounded-xl bg-slate-900 p-5 text-white shadow-inner">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="h-4 w-4 text-amber-500" />
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Total Adjusters
-            </p>
-          </div>
-          <p className="text-3xl font-extrabold">
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Adjusters
+          </p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
             {adjusters.length}
           </p>
         </div>
       </div>
 
-      <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className="mt-4 rounded-lg border border-slate-200 p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-slate-500" />
-            <span className="text-sm font-semibold text-slate-700">Simulation Time (hours)</span>
-          </div>
-          <span className="font-bold text-slate-900 text-lg">
+          <span className="text-sm text-slate-500">Simulation time</span>
+          <span className="font-medium text-slate-900">
             {simulationTime}
           </span>
         </div>
       </div>
 
       {error && (
-        <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">
+        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+      <div className="mt-5">
         <button
           type="button"
           disabled={!canRun || loading}
-          onClick={onSimulation}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-4 text-lg font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={onRunAnalysis}
+          className="w-full rounded-lg bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-3.5 font-bold text-white text-base transition-all hover:from-indigo-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
         >
-          <Play className="h-5 w-5" />
-          {loading ? 'Running...' : 'Run Simulation'}
+          {loading ? (
+            <>
+              <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+              Running Full Analysis...
+            </>
+          ) : (
+            <>
+              🚀 Run Full Analysis
+            </>
+          )}
         </button>
-
-        <button
-          type="button"
-          disabled={!canRun || loading}
-          onClick={onOptimization}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 px-6 py-4 text-lg font-bold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Activity className="h-5 w-5" />
-          {loading ? 'Processing...' : 'Optimize Adjuster Count'}
-        </button>
+        <p className="text-xs text-slate-400 text-center mt-2">
+          Runs both Simulation & Optimization together
+        </p>
       </div>
     </section>
   );

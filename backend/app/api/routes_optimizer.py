@@ -41,24 +41,63 @@ def _generate_mock_optimization_result(
     payload: FactoryConfigInput,
 ) -> OptimizationResultOutput:
     """
-    Generate mock optimization results matching the guide.md contract.
-    Produces a plausible tradeoff curve based on input configuration.
+    Generate optimization results based on queueing theory.
+
+    The steady-state repair demand (offered load) is:
+        rho = sum( count_i * mean_repair_time_i / mttf_i )  for each category i
+
+    This gives the minimum number of adjusters needed to keep up with failures.
+    The optimum adds a small buffer so adjusters aren't pegged at 100% and
+    machines don't wait too long in the queue.
     """
+    import math
+
     total_machines = sum(cat.count for cat in payload.machine_categories)
 
-    # Generate a tradeoff curve: test adjuster counts from 1 to ~total_machines/20
-    max_adjusters = max(10, total_machines // 20)
-    step = max(1, max_adjusters // 6)
+    # Offered load: average number of concurrent repairs needed at steady state
+    rho = sum(
+        cat.count * cat.mean_repair_time / cat.mttf
+        for cat in payload.machine_categories
+    )
+
+    # Minimum adjusters to keep up (must be > rho for a stable queue)
+    min_adjusters = max(1, math.ceil(rho))
+
+    # Sweep from 1 to a reasonable upper bound
+    max_adjusters = max(min_adjusters + 6, min_adjusters * 3, 10)
+    max_adjusters = min(max_adjusters, total_machines)  # cap at total machines
 
     tradeoff_curve: List[TradeoffPoint] = []
     best_score = -1.0
-    optimum_count = 1
+    optimum_count = min_adjusters
 
-    for count in range(1, max_adjusters + 1, step):
-        # Simulate diminishing returns: more adjusters -> higher machine util, lower adjuster util
-        ratio = count / max(total_machines * 0.01, 1)
-        machine_util = min(99.0, 40.0 + 50.0 * (1.0 - 1.0 / (1.0 + ratio)))
-        adjuster_util = max(10.0, 99.0 - ratio * 30.0)
+    for count in range(1, max_adjusters + 1):
+        # Machine utilization: fraction of time machines are working
+        # With `count` adjusters and load `rho`:
+        #   if count <= rho, queue grows unbounded -> utilization approaches (count/rho) * (mttf/(mttf+repair))
+        #   if count > rho, steady state is stable
+        if count >= rho and rho > 0:
+            # Probability a machine is down ~ rho * mean_repair / (count * mttf) scaled
+            # Approximate: fraction of machines being repaired at any time = rho / total_machines
+            # With enough adjusters, wait time drops, so effective downtime ~ repair_time only
+            avg_repair = sum(cat.count * cat.mean_repair_time for cat in payload.machine_categories) / total_machines if total_machines > 0 else 1
+            avg_mttf = sum(cat.count * cat.mttf for cat in payload.machine_categories) / total_machines if total_machines > 0 else 100
+            # Wait factor: when adjusters == rho, wait is high; as adjusters >> rho, wait -> 0
+            excess = count - rho
+            wait_factor = rho / (excess + rho) if (excess + rho) > 0 else 1.0  # fraction of repair time spent waiting
+            effective_downtime = avg_repair * (1 + wait_factor)
+            machine_util = min(99.5, (avg_mttf / (avg_mttf + effective_downtime)) * 100)
+        elif rho > 0:
+            # Understaffed: queue grows, utilization degrades significantly
+            machine_util = min(95.0, max(10.0, (count / rho) * 80.0))
+        else:
+            machine_util = 99.5  # no failures expected
+
+        # Adjuster utilization: what fraction of time adjusters are busy
+        if count > 0:
+            adjuster_util = min(99.0, max(5.0, (rho / count) * 100))
+        else:
+            adjuster_util = 0.0
 
         tradeoff_curve.append(
             TradeoffPoint(
@@ -68,25 +107,12 @@ def _generate_mock_optimization_result(
             )
         )
 
-        # "Elbow" heuristic: maximize combined score with diminishing returns penalty
-        score = machine_util * 0.6 + adjuster_util * 0.4
+        # Elbow heuristic: maximize machine uptime without wasting adjuster time
+        # We want machine_util high but adjuster_util not too low
+        score = machine_util * 0.7 + adjuster_util * 0.3
         if score > best_score:
             best_score = score
             optimum_count = count
-
-    # Ensure we have the optimum count in the curve
-    if optimum_count not in [pt.adjuster_count for pt in tradeoff_curve]:
-        ratio = optimum_count / max(total_machines * 0.01, 1)
-        machine_util = min(99.0, 40.0 + 50.0 * (1.0 - 1.0 / (1.0 + ratio)))
-        adjuster_util = max(10.0, 99.0 - ratio * 30.0)
-        tradeoff_curve.append(
-            TradeoffPoint(
-                adjuster_count=optimum_count,
-                machine_utilization=round(machine_util, 1),
-                adjuster_utilization=round(adjuster_util, 1),
-            )
-        )
-        tradeoff_curve.sort(key=lambda pt: pt.adjuster_count)
 
     # Build recommendation reason
     opt_point = next(
@@ -108,10 +134,68 @@ def _generate_mock_optimization_result(
             f"and adjuster utilization for this factory configuration."
         )
 
+    # Calculate per-category adjuster distribution
+    # Distribute optimum adjusters proportionally based on machine count * failure rate
+    total_weight = sum(cat.count / cat.mttf for cat in payload.machine_categories)
+    per_category = {}
+    allocated = 0
+    sorted_cats = sorted(
+        payload.machine_categories,
+        key=lambda c: c.count / c.mttf,
+        reverse=True,
+    )
+    for i, cat in enumerate(sorted_cats):
+        weight = (cat.count / cat.mttf) / total_weight if total_weight > 0 else 1.0 / len(sorted_cats)
+        if i == len(sorted_cats) - 1:
+            # Last category gets the remainder
+            per_category[cat.name] = max(1, optimum_count - allocated)
+        else:
+            count = max(1, round(optimum_count * weight))
+            per_category[cat.name] = count
+            allocated += count
+
+    # Calculate per-adjuster distribution across the provided adjuster types/profiles
+    per_adjuster = {}
+    if payload.adjusters:
+        num_profiles = len(payload.adjusters)
+        # Compute how many machines each adjuster profile is qualified to service
+        profile_workloads = {}
+        for adj in payload.adjusters:
+            workload = sum(
+                (cat.count / cat.mttf)
+                for cat in payload.machine_categories
+                if cat.name in adj.expertise
+            )
+            profile_workloads[adj.name] = max(workload, 0.1)
+
+        total_workload = sum(profile_workloads.values())
+        adj_allocated = 0
+        sorted_profiles = sorted(
+            payload.adjusters,
+            key=lambda a: profile_workloads[a.name],
+            reverse=True,
+        )
+
+        for j, adj in enumerate(sorted_profiles):
+            if j == num_profiles - 1:
+                # Last adjuster profile gets the exact remainder to ensure sum equals optimum_count
+                remainder = max(1, optimum_count - adj_allocated)
+                per_adjuster[adj.name] = remainder
+            else:
+                share = profile_workloads[adj.name] / total_workload
+                alloc = max(1, round(optimum_count * share))
+                # Don't exceed total minus remaining slots
+                max_allowed = optimum_count - adj_allocated - (num_profiles - 1 - j)
+                alloc = min(alloc, max(1, max_allowed))
+                per_adjuster[adj.name] = alloc
+                adj_allocated += alloc
+
     return OptimizationResultOutput(
         optimum_adjuster_count=optimum_count,
         tradeoff_curve=tradeoff_curve,
         recommendation_reason=reason,
+        per_category_adjusters=per_category,
+        per_adjuster_counts=per_adjuster if per_adjuster else None,
     )
 
 
@@ -125,9 +209,39 @@ async def optimize_staffing(
     Simulates across different adjuster counts and calculates the 'elbow point'
     where machine downtime cost balances adjuster idle time.
 
+    Validates adjuster business rules:
+    - Adjuster names must be unique
+    - No two adjusters can have the exact same expertise set
+
     Integration: Delegates to Person 2's optimizer when available,
     otherwise returns intelligent mock tradeoff data.
     """
+    # --- Adjuster Validation ---
+    # Rule 1: No duplicate adjuster names
+    seen_names = set()
+    for adj in payload.adjusters:
+        if adj.name.lower() in seen_names:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Duplicate adjuster name: '{adj.name}'. Each adjuster must have a unique name.",
+            )
+        seen_names.add(adj.name.lower())
+
+    # Rule 2: No two adjusters can have the exact same expertise set
+    seen_expertise = []
+    for adj in payload.adjusters:
+        expertise_set = frozenset(e.lower() for e in adj.expertise)
+        if expertise_set in seen_expertise:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Adjuster '{adj.name}' has the same expertise set "
+                    f"{sorted(adj.expertise)} as another adjuster. "
+                    f"No two adjusters can share the exact same expertise combination."
+                ),
+            )
+        seen_expertise.append(expertise_set)
+
     logger.info(
         "Optimization requested: sim_time=%d, categories=%d, adjusters=%d",
         payload.simulation_time,
@@ -144,7 +258,15 @@ async def optimize_staffing(
                 "Optimization completed: optimum=%d adjusters",
                 result.optimum_adjuster_count,
             )
-            return result
+            # If real engine result doesn't have per-category or per-adjuster breakdown, generate it
+            mock_supplement = _generate_mock_optimization_result(payload)
+            return OptimizationResultOutput(
+                optimum_adjuster_count=result.optimum_adjuster_count,
+                tradeoff_curve=result.tradeoff_curve,
+                recommendation_reason=result.recommendation_reason,
+                per_category_adjusters=getattr(result, "per_category_adjusters", None) or mock_supplement.per_category_adjusters,
+                per_adjuster_counts=getattr(result, "per_adjuster_counts", None) or mock_supplement.per_adjuster_counts,
+            )
         except Exception as e:
             logger.error("Optimizer engine error: %s", str(e))
             raise HTTPException(

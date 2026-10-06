@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Sliders } from 'lucide-react';
 import CategoryForm from './CategoryForm';
 import AdjusterForm from './AdjusterForm';
 import PresetSelector from './PresetSelector';
@@ -17,17 +16,37 @@ const DEFAULT_CONFIG = {
 };
 
 export default function ConfiguratorSection({
-  onSimulationComplete,
-  onOptimizationComplete,
+  onAnalysisComplete,
+  onConfigChange,
 }) {
-  const [simulationTime, setSimulationTime] = useState(
-    DEFAULT_CONFIG.simulation_time,
-  );
-  const [categories, setCategories] = useState([]);
-  const [adjusters, setAdjusters] = useState([]);
+  const [simulationTime, setSimulationTime] = useState(() => {
+    const saved = localStorage.getItem('factoryservsim_draft_time');
+    return saved ? Number(saved) : DEFAULT_CONFIG.simulation_time;
+  });
+  const [categories, setCategories] = useState(() => {
+    const saved = localStorage.getItem('factoryservsim_draft_categories');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [adjusters, setAdjusters] = useState(() => {
+    const saved = localStorage.getItem('factoryservsim_draft_adjusters');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [presets, setPresets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Keep parent in sync with config whenever it changes, and save to localStorage (like cookies)
+  useEffect(() => {
+    localStorage.setItem('factoryservsim_draft_time', simulationTime.toString());
+    localStorage.setItem('factoryservsim_draft_categories', JSON.stringify(categories));
+    localStorage.setItem('factoryservsim_draft_adjusters', JSON.stringify(adjusters));
+
+    onConfigChange?.({
+      simulation_time: Number(simulationTime),
+      machine_categories: categories,
+      adjusters: adjusters,
+    });
+  }, [simulationTime, categories, adjusters, onConfigChange]);
 
   useEffect(() => {
     let mounted = true;
@@ -85,7 +104,8 @@ export default function ConfiguratorSection({
     return '';
   };
 
-  const handleSimulation = async () => {
+  // Single handler that runs optimization first, then simulation with optimal adjusters
+  const handleRunAnalysis = async () => {
     const validationError = validate();
 
     if (validationError) {
@@ -97,99 +117,152 @@ export default function ConfiguratorSection({
     setError('');
 
     try {
-      const result = await runSimulation(buildPayload());
-      onSimulationComplete?.(result);
+      const basePayload = buildPayload();
+      
+      // 1. Run optimization first
+      const optResult = await runOptimization(basePayload);
+      
+      // 2. Build optimized adjusters payload based on per_adjuster_counts
+      let simAdjusters = basePayload.adjusters;
+      if (optResult && optResult.per_adjuster_counts) {
+        simAdjusters = [];
+        let idCounter = 1;
+        for (const [profileName, count] of Object.entries(optResult.per_adjuster_counts)) {
+          const originalProfile = basePayload.adjusters.find(a => a.name === profileName);
+          const expertise = originalProfile ? originalProfile.expertise : [];
+          for (let i = 0; i < count; i++) {
+            simAdjusters.push({
+              id: idCounter++,
+              name: count > 1 ? `${profileName} - ${i + 1}` : profileName,
+              expertise: expertise
+            });
+          }
+        }
+      }
+      
+      const optimizedPayload = {
+        ...basePayload,
+        adjusters: simAdjusters,
+      };
+
+      // 3. Run simulation with optimal adjusters
+      const simResult = await runSimulation(optimizedPayload);
+      
+      onAnalysisComplete?.(simResult, optResult);
     } catch (requestError) {
-      setError(requestError.message || 'Simulation failed.');
+      setError(requestError.message || 'Analysis failed.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOptimization = async () => {
-    const validationError = validate();
+  const [wizardStep, setWizardStep] = useState(1);
+  const totalSteps = 3;
 
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const result = await runOptimization(buildPayload());
-      onOptimizationComplete?.(result);
-    } catch (requestError) {
-      setError(requestError.message || 'Optimization failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleNext = () => setWizardStep((prev) => Math.min(prev + 1, totalSteps));
+  const handlePrev = () => setWizardStep((prev) => Math.max(prev - 1, 1));
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-900 text-white shadow-sm">
-          <Settings className="h-6 w-6 text-amber-500" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            Factory Configurator
-          </h1>
-          <p className="mt-1 text-sm text-slate-600 font-medium">
-            Configure machine categories and adjuster expertise before running the simulation.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Factory Configurator
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Step {wizardStep} of {totalSteps}: {wizardStep === 1 ? 'Configure Machines' : wizardStep === 2 ? 'Configure Adjusters' : 'Review & Run'}
+        </p>
       </div>
 
-      <PresetSelector presets={presets} onSelect={applyPreset} />
+      {/* Progress Bar */}
+      <div className="w-full bg-slate-200 rounded-full h-2.5 mb-6">
+        <div 
+          className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
+          style={{ width: `${(wizardStep / totalSteps) * 100}%` }}
+        ></div>
+      </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-        <div className="flex items-center gap-2 mb-4">
-          <Sliders className="h-5 w-5 text-slate-700" />
-          <h2 className="text-lg font-semibold text-slate-900">Global Settings</h2>
-        </div>
-        
-        <label
-          htmlFor="simulation-time"
-          className="mb-1.5 block text-sm font-semibold text-slate-700"
+      {/* Wizard Steps */}
+      <div className="min-h-[400px]">
+        {wizardStep === 1 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            {/* Provide presets right at the start to save time */}
+            <div className="bg-slate-50 border border-indigo-100 p-4 rounded-xl">
+              <h2 className="text-sm font-semibold text-indigo-900 mb-2 flex items-center gap-2">
+                ⚡ Quick Start: Choose a Preset
+              </h2>
+              <PresetSelector presets={presets} onSelect={applyPreset} />
+            </div>
+            
+            <CategoryForm categories={categories} onChange={setCategories} />
+          </div>
+        )}
+
+        {wizardStep === 2 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <AdjusterForm adjusters={adjusters} categories={categories} onChange={setAdjusters} />
+          </div>
+        )}
+
+        {wizardStep === 3 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <label
+                htmlFor="simulation-time"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
+                Simulation time (hours)
+              </label>
+              <input
+                id="simulation-time"
+                type="number"
+                min="1"
+                step="1"
+                value={simulationTime}
+                onChange={(event) => setSimulationTime(event.target.value)}
+                className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+            </section>
+
+            <ConfigSummary
+              simulationTime={simulationTime}
+              categories={categories}
+              adjusters={adjusters}
+              onRunAnalysis={handleRunAnalysis}
+              loading={loading}
+              error={error}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Wizard Navigation */}
+      <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+        <button
+          onClick={handlePrev}
+          disabled={wizardStep === 1}
+          className={`px-5 py-2 text-sm font-medium rounded-lg transition-colors ${
+            wizardStep === 1
+              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm'
+          }`}
         >
-          Simulation time (hours)
-        </label>
-        <div className="relative max-w-xs">
-          <input
-            id="simulation-time"
-            type="number"
-            min="1"
-            step="1"
-            value={simulationTime}
-            onChange={(event) => setSimulationTime(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 outline-none transition-all focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20"
-          />
-        </div>
-      </section>
+          ← Back
+        </button>
 
-      <CategoryForm
-        categories={categories}
-        onChange={setCategories}
-      />
-
-      <AdjusterForm
-        adjusters={adjusters}
-        categories={categories}
-        onChange={setAdjusters}
-      />
-
-      <ConfigSummary
-        simulationTime={simulationTime}
-        categories={categories}
-        adjusters={adjusters}
-        onSimulation={handleSimulation}
-        onOptimization={handleOptimization}
-        loading={loading}
-        error={error}
-      />
+        {wizardStep < totalSteps ? (
+          <button
+            onClick={handleNext}
+            className="px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2"
+          >
+            Next Step →
+          </button>
+        ) : (
+          <div className="text-sm text-slate-500 italic">
+            Ready to Run! Click the button above.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

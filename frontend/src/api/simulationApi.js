@@ -104,5 +104,15 @@ export function getMockOptimizationResults() {
     ],
     recommendation_reason:
       '6 adjusters provides 93.8% machine uptime. Adding 2 more adjusters yields only +1.3% uptime at 64% worker utilization.',
+    per_category_adjusters: {
+      Lathe: 3,
+      Turning: 1,
+      Drilling: 1,
+      Soldering: 1,
+    },
+    per_adjuster_counts: {
+      'Adjuster 1': 2,
+      'Adjuster 2': 4,
+    },
   };
 }
