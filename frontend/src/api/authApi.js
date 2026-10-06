@@ -4,9 +4,62 @@
  * Connects to the backend auth and factory endpoints.
  * Manages JWT token storage in localStorage.
  * Auth is factory_id-based: data persists per factory, not per manager.
+ *
+ * Includes:
+ *  - Warm-up ping on import to wake the Render server during cold starts
+ *  - Retry logic with timeout to handle transient network / cold-start failures
  */
 
 const API_BASE = 'https://factoryservsim-factory-machine-adjuster.onrender.com';
+
+// ---------------------------------------------------------------------------
+// Warm-up: fire a lightweight health-check as soon as this module loads
+// so the Render server starts waking up while the user types credentials.
+// ---------------------------------------------------------------------------
+
+let _serverReady = false;
+
+(function warmUp() {
+  fetch(`${API_BASE}/api/health`, { method: 'GET', mode: 'cors' })
+    .then(() => { _serverReady = true; })
+    .catch(() => { /* silently ignore — the real request will retry */ });
+})();
+
+/** Check if the server has responded to the warm-up ping. */
+export function isServerWarmedUp() {
+  return _serverReady;
+}
+
+// ---------------------------------------------------------------------------
+// Retry-aware fetch wrapper
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch with automatic retry and per-attempt timeout.
+ * - retries:        max number of retries (default 2, so 3 total attempts)
+ * - timeoutMs:      abort each attempt after this many ms (default 30 000)
+ * - retryDelayMs:   initial delay between retries, doubles each time (default 1 000)
+ */
+async function fetchWithRetry(url, options = {}, { retries = 2, timeoutMs = 30000, retryDelayMs = 1000 } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      _serverReady = true;
+      return response;
+    } catch (err) {
+      clearTimeout(timer);
+      lastError = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, retryDelayMs * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
 
 // ---------------------------------------------------------------------------
 // Token Management
@@ -44,7 +97,7 @@ function authHeaders() {
 // ---------------------------------------------------------------------------
 
 export async function registerUser(factoryId, factoryName, managerName, email, password) {
-  const response = await fetch(`${API_BASE}/api/auth/register`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -62,7 +115,7 @@ export async function registerUser(factoryId, factoryName, managerName, email, p
 }
 
 export async function loginUser(factoryId, email, password) {
-  const response = await fetch(`${API_BASE}/api/auth/login`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ factory_id: factoryId, email, password }),
@@ -84,7 +137,7 @@ export function logoutUser() {
 }
 
 export async function fetchMe() {
-  const response = await fetch(`${API_BASE}/api/auth/me`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/auth/me`, {
     headers: { ...authHeaders() },
   });
   if (!response.ok) {
@@ -99,7 +152,7 @@ export async function fetchMe() {
 // ---------------------------------------------------------------------------
 
 export async function createFactory(factoryName) {
-  const response = await fetch(`${API_BASE}/api/factories`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/factories`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ factory_name: factoryName }),
@@ -110,7 +163,7 @@ export async function createFactory(factoryName) {
 }
 
 export async function listFactories() {
-  const response = await fetch(`${API_BASE}/api/factories`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/factories`, {
     headers: { ...authHeaders() },
   });
   if (!response.ok) throw new Error('Failed to list factories');
@@ -118,7 +171,7 @@ export async function listFactories() {
 }
 
 export async function getFactory(factoryId) {
-  const response = await fetch(`${API_BASE}/api/factories/${factoryId}`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/factories/${factoryId}`, {
     headers: { ...authHeaders() },
   });
   if (!response.ok) throw new Error('Factory not found');
@@ -126,7 +179,7 @@ export async function getFactory(factoryId) {
 }
 
 export async function deleteFactory(factoryId) {
-  const response = await fetch(`${API_BASE}/api/factories/${factoryId}`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/factories/${factoryId}`, {
     method: 'DELETE',
     headers: { ...authHeaders() },
   });
@@ -134,7 +187,7 @@ export async function deleteFactory(factoryId) {
 }
 
 export async function saveReport(factoryId, reportData) {
-  const response = await fetch(`${API_BASE}/api/factories/${factoryId}/report`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/factories/${factoryId}/report`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(reportData),
@@ -145,7 +198,7 @@ export async function saveReport(factoryId, reportData) {
 }
 
 export async function listReports(factoryId) {
-  const response = await fetch(`${API_BASE}/api/factories/${factoryId}/reports`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/factories/${factoryId}/reports`, {
     headers: { ...authHeaders() },
   });
   if (!response.ok) throw new Error('Failed to list reports');
@@ -153,7 +206,7 @@ export async function listReports(factoryId) {
 }
 
 export async function getManagerHistory() {
-  const response = await fetch(`${API_BASE}/api/factories/history`, {
+  const response = await fetchWithRetry(`${API_BASE}/api/factories/history`, {
     headers: { ...authHeaders() },
   });
   if (!response.ok) throw new Error('Failed to fetch simulation history');

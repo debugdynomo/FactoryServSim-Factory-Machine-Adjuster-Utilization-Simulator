@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { LogIn, UserPlus, Factory, Mail, Lock, User, Hash, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LogIn, UserPlus, Factory, Mail, Lock, User, Hash, CheckCircle, Loader } from 'lucide-react';
+import { isServerWarmedUp } from '../../api/authApi';
 
 /**
  * AuthPage — Login & Register page for FactoryServSim.
@@ -17,6 +18,19 @@ export default function AuthPage({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [serverReady, setServerReady] = useState(isServerWarmedUp());
+
+  // Poll server readiness while still waking up
+  useEffect(() => {
+    if (serverReady) return;
+    const interval = setInterval(() => {
+      if (isServerWarmedUp()) {
+        setServerReady(true);
+        clearInterval(interval);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [serverReady]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,6 +84,14 @@ export default function AuthPage({ onLoginSuccess }) {
           <h2 className="text-xl font-bold text-white mb-6 text-center">
             {isRegister ? 'Register New Factory Account' : 'Factory Login'}
           </h2>
+
+          {/* Server wake-up status */}
+          {!serverReady && (
+            <div className="mb-4 p-3 bg-amber-900/50 border border-amber-700 rounded-lg text-amber-300 text-sm flex items-center gap-2">
+              <Loader className="w-4 h-4 flex-shrink-0 animate-spin" />
+              Waking up server... You can start filling in your details.
+            </div>
+          )}
 
           {successMsg && (
             <div className="mb-4 p-3 bg-emerald-900/50 border border-emerald-700 rounded-lg text-emerald-300 text-sm flex items-center gap-2">

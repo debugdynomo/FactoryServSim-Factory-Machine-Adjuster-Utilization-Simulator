@@ -3,9 +3,35 @@
  * 
  * Connects to Person 3's FastAPI backend endpoints.
  * Falls back to mock data when the backend is unavailable.
+ *
+ * Includes retry logic with timeout to handle Render cold-start delays.
  */
 
 const API_BASE = 'https://factoryservsim-factory-machine-adjuster.onrender.com';
+
+// ---------------------------------------------------------------------------
+// Retry-aware fetch wrapper
+// ---------------------------------------------------------------------------
+
+async function fetchWithRetry(url, options = {}, { retries = 2, timeoutMs = 30000, retryDelayMs = 1000 } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      return response;
+    } catch (err) {
+      clearTimeout(timer);
+      lastError = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, retryDelayMs * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Run a simulation with the given factory configuration.
@@ -14,7 +40,7 @@ const API_BASE = 'https://factoryservsim-factory-machine-adjuster.onrender.com';
  */
 export async function runSimulation(config) {
   try {
-    const response = await fetch(`${API_BASE}/api/simulation/run`, {
+    const response = await fetchWithRetry(`${API_BASE}/api/simulation/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
@@ -34,7 +60,7 @@ export async function runSimulation(config) {
  */
 export async function runOptimization(config) {
   try {
-    const response = await fetch(`${API_BASE}/api/simulation/optimize`, {
+    const response = await fetchWithRetry(`${API_BASE}/api/simulation/optimize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
@@ -53,7 +79,7 @@ export async function runOptimization(config) {
  */
 export async function fetchPresets() {
   try {
-    const response = await fetch(`${API_BASE}/api/simulation/presets`);
+    const response = await fetchWithRetry(`${API_BASE}/api/simulation/presets`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {
