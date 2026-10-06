@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Target, Info, CheckCircle2 } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -14,26 +15,8 @@ import {
 
 /**
  * OptimumRecommendation — Person 6, Analytics Module
- *
- * Displays the recommended optimum number of adjusters with:
- *   1. A prominent recommendation card with the optimum count
- *   2. A visual area chart highlighting the tradeoff zone
- *   3. The recommendation reasoning text from the optimizer
- *
- * Data source: OptimizationResultOutput from Person 2/3's optimizer API.
- *
- * Props:
- *   - optimizationResults: {
- *       optimum_adjuster_count: number,
- *       tradeoff_curve: Array<{ adjuster_count, machine_utilization, adjuster_utilization }>,
- *       recommendation_reason: string
- *     }
  */
 
-/**
- * Compute the "efficiency score" for each point on the tradeoff curve.
- * A simple balanced metric: geometric mean of machine and adjuster utilization.
- */
 function useEfficiencyData(tradeoffCurve, optimumCount) {
   return useMemo(() => {
     if (!tradeoffCurve || tradeoffCurve.length === 0) return [];
@@ -49,20 +32,17 @@ function useEfficiencyData(tradeoffCurve, optimumCount) {
   }, [tradeoffCurve, optimumCount]);
 }
 
-/**
- * Custom dot component to highlight the optimum point.
- */
 function OptimumDot(props) {
   const { cx, cy, payload } = props;
   if (payload.is_optimum) {
     return (
       <g>
-        <circle cx={cx} cy={cy} r={8} fill="#e94560" fillOpacity={0.3} />
-        <circle cx={cx} cy={cy} r={5} fill="#e94560" stroke="#fff" strokeWidth={2} />
+        <circle cx={cx} cy={cy} r={6} fill="#2563eb" fillOpacity={0.2} />
+        <circle cx={cx} cy={cy} r={4} fill="#2563eb" stroke="#fff" strokeWidth={1} />
       </g>
     );
   }
-  return <circle cx={cx} cy={cy} r={3} fill="#6366f1" />;
+  return <circle cx={cx} cy={cy} r={0} />;
 }
 
 function RecommendationTooltip({ active, payload }) {
@@ -71,18 +51,24 @@ function RecommendationTooltip({ active, payload }) {
   if (!data) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
-      <p className="font-semibold text-gray-700 mb-1">
-        {data.adjuster_count} Adjuster{data.adjuster_count !== 1 ? 's' : ''}
+    <div className="bg-white border border-slate-200 rounded-[4px] px-3 py-2 text-[12px] shadow-lg">
+      <p className="font-semibold text-slate-900 mb-1 border-b border-slate-100 pb-1 flex items-center justify-between gap-4">
+        <span>{data.adjuster_count} Adjusters</span>
         {data.is_optimum && (
-          <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-            ★ Optimum
+          <span className="text-[10px] uppercase tracking-wider text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-[4px] border border-blue-200">
+            Optimum
           </span>
         )}
       </p>
-      <p className="text-emerald-600">Machine Util: {data.machine_utilization}%</p>
-      <p className="text-indigo-600">Adjuster Util: {data.adjuster_utilization}%</p>
-      <p className="text-gray-500">Efficiency: {data.efficiency_score}%</p>
+      <p className="text-slate-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        Machine Util: <span className="font-semibold text-slate-900">{data.machine_utilization}%</span>
+      </p>
+      <p className="text-slate-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        Adjuster Util: <span className="font-semibold text-slate-900">{data.adjuster_utilization}%</span>
+      </p>
+      <p className="text-slate-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        Efficiency: <span className="font-semibold text-slate-900">{data.efficiency_score}%</span>
+      </p>
     </div>
   );
 }
@@ -115,96 +101,85 @@ export default function OptimumRecommendation({ optimizationResults }) {
   return (
     <div className="space-y-6">
       {/* Recommendation Hero Card */}
-      <div className="bg-gradient-to-r from-factory-dark to-factory-accent rounded-xl shadow-lg p-6 text-white">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* Optimum Count */}
-          <div className="text-center md:text-left">
-            <p className="text-sm uppercase tracking-wider text-gray-300 mb-1">
-              Recommended Optimum
-            </p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-6xl font-bold text-factory-highlight">
-                {optimumCount ?? '—'}
-              </span>
-              <span className="text-xl text-gray-300">
-                Adjuster{optimumCount !== 1 ? 's' : ''}
-              </span>
-            </div>
+      <div className="bg-white border border-slate-200 rounded-[6px] p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        {/* Optimum Count */}
+        <div className="text-center md:text-left flex flex-col">
+          <p className="text-[12px] uppercase tracking-wider text-slate-500 font-semibold mb-1 flex items-center gap-2 justify-center md:justify-start">
+            <Target className="w-4 h-4 text-slate-400" />
+            Recommended Staffing
+          </p>
+          <div className="flex items-baseline gap-2 justify-center md:justify-start">
+            <span className="text-[36px] font-semibold text-slate-900 leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {optimumCount ?? '—'}
+            </span>
+            <span className="text-[14px] text-slate-500">
+              Adjuster{optimumCount !== 1 ? 's' : ''}
+            </span>
           </div>
-
-          {/* Key Metrics at Optimum */}
-          {optimumPoint && (
-            <div className="flex gap-6">
-              <div className="text-center">
-                <p className="text-xs uppercase tracking-wider text-gray-400">Machine Uptime</p>
-                <p className="text-2xl font-bold text-emerald-400">
-                  {optimumPoint.machine_utilization}%
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs uppercase tracking-wider text-gray-400">Adjuster Busy</p>
-                <p className="text-2xl font-bold text-indigo-400">
-                  {optimumPoint.adjuster_utilization}%
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs uppercase tracking-wider text-gray-400">Efficiency</p>
-                <p className="text-2xl font-bold text-amber-400">
-                  {optimumPoint.efficiency_score}%
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Recommendation Reason */}
-        {reason && (
-          <div className="mt-4 bg-white/10 rounded-lg p-4">
-            <p className="text-sm text-gray-200">
-              <span className="font-semibold text-white">💡 Insight: </span>
-              {reason}
-            </p>
+        {/* Key Metrics at Optimum */}
+        {optimumPoint && (
+          <div className="flex gap-8">
+            <div className="text-center md:text-left">
+              <p className="text-[12px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Machine Uptime</p>
+              <p className="text-[20px] font-semibold text-slate-900" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {optimumPoint.machine_utilization}%
+              </p>
+            </div>
+            <div className="text-center md:text-left">
+              <p className="text-[12px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Adjuster Busy</p>
+              <p className="text-[20px] font-semibold text-slate-900" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {optimumPoint.adjuster_utilization}%
+              </p>
+            </div>
+            <div className="text-center md:text-left">
+              <p className="text-[12px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Efficiency Score</p>
+              <p className="text-[20px] font-semibold text-blue-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {optimumPoint.efficiency_score}%
+              </p>
+            </div>
           </div>
         )}
       </div>
 
+      {/* Recommendation Reason */}
+      {reason && (
+        <div className="bg-slate-50 border border-slate-200 rounded-[6px] p-4 flex gap-3 items-start">
+          <Info className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+          <p className="text-[13px] text-slate-600 leading-relaxed">
+            <span className="font-semibold text-slate-900 mr-1">Insight:</span>
+            {reason}
+          </p>
+        </div>
+      )}
+
       {/* Per-Category Adjuster Staffing Report */}
       {optimizationResults?.per_category_adjusters && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">
-            📋 Recommended Adjusters Per Category
+        <div className="bg-white border border-slate-200 rounded-[6px] p-5">
+          <h3 className="text-[14px] font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-slate-400" />
+            Recommended Adjusters Per Category
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Breakdown of how many adjusters are needed for each machine category based on failure rates and machine counts.
+          <p className="text-[12px] text-slate-500 mb-4">
+            Breakdown of how many adjusters are needed for each machine category.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Object.entries(optimizationResults.per_category_adjusters).map(
               ([category, count]) => (
                 <div
                   key={category}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4"
+                  className="flex items-center justify-between p-3 border border-slate-200 rounded-[4px] bg-slate-50"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">
-                      {category}
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {count}{' '}
-                      <span className="text-sm font-normal text-slate-500">
-                        adjuster{count !== 1 ? 's' : ''}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold text-lg">
-                    {count}
-                  </div>
+                  <span className="font-medium text-[13px] text-slate-700">{category}</span>
+                  <span className="font-semibold text-[14px] text-slate-900" style={{ fontVariantNumeric: 'tabular-nums' }}>{count}</span>
                 </div>
               )
             )}
           </div>
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-3">
-            <span className="text-emerald-600 font-semibold text-sm">
-              Total Recommended: {optimumCount} adjuster{optimumCount !== 1 ? 's' : ''}
+          <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3">
+            <span className="text-[12px] text-slate-600">
+              Total Recommended: <span className="font-semibold text-slate-900">{optimumCount}</span> adjuster{optimumCount !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
@@ -212,94 +187,99 @@ export default function OptimumRecommendation({ optimizationResults }) {
 
       {/* Per-Adjuster Staffing Breakdown */}
       {optimizationResults?.per_adjuster_counts && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">
-            👷 Required Adjusters by Profile
+        <div className="bg-white border border-slate-200 rounded-[6px] p-5">
+          <h3 className="text-[14px] font-semibold text-slate-900 mb-1">
+            Required Adjusters by Profile
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Exact quantity of each adjuster role required to achieve the optimal total of {optimumCount} adjusters.
+          <p className="text-[12px] text-slate-500 mb-4">
+            Exact quantity of each adjuster role required to achieve the optimal total.
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Object.entries(optimizationResults.per_adjuster_counts).map(
               ([adjusterName, count]) => (
                 <div
                   key={adjusterName}
-                  className="flex items-center justify-between rounded-xl border-2 border-indigo-100 bg-indigo-50/50 p-4 shadow-sm"
+                  className="flex items-center justify-between rounded-[4px] border border-blue-200 bg-blue-50/50 p-4"
                 >
                   <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-[4px]">
                       Role Profile
                     </span>
-                    <p className="mt-1 text-base font-bold text-slate-900">
+                    <p className="mt-1 text-[14px] font-semibold text-slate-900">
                       {adjusterName}
                     </p>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-[12px] text-slate-600 mt-0.5">
                       Hire / Assign:{' '}
-                      <span className="font-semibold text-indigo-700">
+                      <span className="font-semibold text-blue-700">
                         {count} required
                       </span>
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white font-extrabold text-xl shadow-md">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-[4px] bg-blue-600 text-white font-bold text-[16px]">
                     {count}
                   </div>
                 </div>
               )
             )}
           </div>
-          <div className="mt-4 flex items-center justify-between rounded-lg bg-indigo-50 border border-indigo-200 p-3">
-            <span className="text-xs text-indigo-800 font-medium">
-              💡 Staffing Recipe: {Object.entries(optimizationResults.per_adjuster_counts).map(([name, count]) => `${count}x ${name}`).join(' + ')}
+          <div className="mt-4 flex items-center justify-between rounded-[4px] bg-slate-50 border border-slate-200 p-3">
+            <span className="text-[12px] text-slate-600 font-medium">
+              Recipe: {Object.entries(optimizationResults.per_adjuster_counts).map(([name, count]) => `${count}x ${name}`).join(' + ')}
             </span>
-            <span className="text-indigo-900 font-bold text-sm">
+            <span className="text-slate-900 font-semibold text-[13px]">
               Total: {optimumCount}
             </span>
           </div>
         </div>
       )}
 
-      {/* Efficiency Tradeoff Area Chart */}
+      {/* Efficiency Curve Chart */}
       {efficiencyData.length > 0 && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            🎯 Staffing Efficiency Tradeoff
+        <div className="bg-white border border-slate-200 rounded-[6px] p-5">
+          <h3 className="text-[14px] font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <Target className="w-4 h-4 text-slate-400" />
+            Efficiency Curve & Tradeoff
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            The efficiency score balances machine uptime against adjuster utilization.
-            The optimum point maximizes the combined efficiency.
-          </p>
-          <ResponsiveContainer width="100%" height={350}>
-            <AreaChart data={efficiencyData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={efficiencyData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
               <defs>
                 <linearGradient id="efficiencyGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0.05} />
+                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis
                 dataKey="adjuster_count"
-                label={{ value: 'Number of Adjusters', position: 'insideBottomRight', offset: -10 }}
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: '#64748b' }}
+                tickLine={false}
+                axisLine={{ stroke: '#e2e8f0' }}
               />
               <YAxis
                 domain={[0, 100]}
-                label={{ value: 'Score (%)', angle: -90, position: 'insideLeft' }}
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: '#64748b' }}
+                tickLine={false}
+                axisLine={{ stroke: '#e2e8f0' }}
               />
-              <Tooltip content={<RecommendationTooltip />} />
+              <Tooltip content={<RecommendationTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
               {optimumCount && (
                 <ReferenceLine
                   x={optimumCount}
-                  stroke="#e94560"
-                  strokeDasharray="5 5"
-                  strokeWidth={2}
+                  stroke="#2563eb"
+                  strokeWidth={1}
+                  label={{
+                    value: 'Optimum',
+                    position: 'top',
+                    fill: '#2563eb',
+                    fontSize: 10,
+                    fontWeight: 600,
+                  }}
                 />
               )}
               <Area
                 type="monotone"
                 dataKey="efficiency_score"
-                stroke="#6366f1"
+                stroke="#2563eb"
                 fill="url(#efficiencyGradient)"
                 strokeWidth={2}
                 dot={<OptimumDot />}
@@ -312,41 +292,45 @@ export default function OptimumRecommendation({ optimizationResults }) {
 
       {/* Tradeoff Data Table */}
       {efficiencyData.length > 0 && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            📋 Staffing Options Comparison
+        <div className="bg-white border border-slate-200 rounded-[6px] p-5">
+          <h3 className="text-[14px] font-semibold text-slate-900 mb-4">
+            Staffing Options Comparison
           </h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+            <table className="w-full text-[14px] text-left">
+              <thead className="bg-slate-50 text-slate-500 uppercase text-[12px] font-semibold tracking-wider">
                 <tr>
-                  <th className="px-4 py-3">Adjusters</th>
-                  <th className="px-4 py-3 text-right">Machine Util.</th>
-                  <th className="px-4 py-3 text-right">Adjuster Util.</th>
-                  <th className="px-4 py-3 text-right">Efficiency</th>
-                  <th className="px-4 py-3 text-center">Recommendation</th>
+                  <th className="px-4 py-3 border-y border-slate-200">Adjusters</th>
+                  <th className="px-4 py-3 border-y border-slate-200 text-right">Machine Util.</th>
+                  <th className="px-4 py-3 border-y border-slate-200 text-right">Adjuster Util.</th>
+                  <th className="px-4 py-3 border-y border-slate-200 text-right">Efficiency</th>
+                  <th className="px-4 py-3 border-y border-slate-200 text-center">Recommendation</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {efficiencyData.map((row) => (
                   <tr
                     key={row.adjuster_count}
-                    className={`hover:bg-gray-50 ${
-                      row.is_optimum ? 'bg-red-50 font-semibold' : ''
+                    className={`hover:bg-slate-50 transition-colors ${
+                      row.is_optimum ? 'bg-blue-50/50' : ''
                     }`}
                   >
-                    <td className="px-4 py-3 font-mono">{row.adjuster_count}</td>
-                    <td className="px-4 py-3 text-right font-mono text-emerald-600">
+                    <td className="px-4 py-3 font-medium text-slate-900" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.adjuster_count}
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
                       {row.machine_utilization}%
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-indigo-600">
+                    <td className="px-4 py-3 text-right text-slate-600" style={{ fontVariantNumeric: 'tabular-nums' }}>
                       {row.adjuster_utilization}%
                     </td>
-                    <td className="px-4 py-3 text-right font-mono">{row.efficiency_score}%</td>
+                    <td className="px-4 py-3 text-right text-slate-600 font-medium" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.efficiency_score}%
+                    </td>
                     <td className="px-4 py-3 text-center">
                       {row.is_optimum && (
-                        <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
-                          ★ OPTIMUM
+                        <span className="text-[10px] uppercase tracking-wider text-blue-700 bg-blue-100 border border-blue-200 font-semibold px-2 py-0.5 rounded-[4px]">
+                          Optimum
                         </span>
                       )}
                     </td>
