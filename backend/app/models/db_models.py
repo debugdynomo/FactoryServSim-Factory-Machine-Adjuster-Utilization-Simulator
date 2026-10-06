@@ -37,6 +37,8 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     manager_name = Column(String(255), nullable=False)
+    factory_id = Column(String(255), nullable=True)
+    factory_name = Column(String(255), nullable=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )

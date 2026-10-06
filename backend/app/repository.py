@@ -122,7 +122,13 @@ def create_user(factory_id: str, factory_name: str, email: str, hashed_password:
 
     # SQLite fallback
     with SessionLocal() as db:
-        u = SqlUser(email=email, hashed_password=hashed_password, manager_name=manager_name)
+        u = SqlUser(
+            email=email, 
+            hashed_password=hashed_password, 
+            manager_name=manager_name,
+            factory_id=factory_id,
+            factory_name=factory_name
+        )
         db.add(u)
         db.commit()
         db.refresh(u)
@@ -131,8 +137,8 @@ def create_user(factory_id: str, factory_name: str, email: str, hashed_password:
             "email": u.email,
             "hashed_password": u.hashed_password,
             "manager_name": u.manager_name,
-            "factory_id": factory_id,
-            "factory_name": factory_name,
+            "factory_id": u.factory_id,
+            "factory_name": u.factory_name,
             "created_at": u.created_at.isoformat() if u.created_at else "",
         }
 
