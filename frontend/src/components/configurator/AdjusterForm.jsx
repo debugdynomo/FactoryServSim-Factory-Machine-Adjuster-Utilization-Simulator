@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 export default function AdjusterForm({
   adjusters,
@@ -8,6 +8,40 @@ export default function AdjusterForm({
   const [name, setName] = useState('');
   const [expertise, setExpertise] = useState([]);
   const [error, setError] = useState('');
+
+  // Get current valid category names
+  const validCategoryNames = useMemo(
+    () => categories.map((c) => c.name),
+    [categories],
+  );
+
+  // Auto-cleanup: when categories change, remove stale expertise from existing adjusters
+  useEffect(() => {
+    if (adjusters.length === 0 || validCategoryNames.length === 0) return;
+
+    const updated = adjusters.map((adj) => {
+      const cleanedExpertise = adj.expertise.filter((exp) =>
+        validCategoryNames.includes(exp),
+      );
+      if (cleanedExpertise.length !== adj.expertise.length) {
+        return { ...adj, expertise: cleanedExpertise };
+      }
+      return adj;
+    });
+
+    // Only call onChange if something actually changed
+    const changed = updated.some(
+      (adj, i) => adj.expertise.length !== adjusters[i].expertise.length,
+    );
+    if (changed) {
+      onChange(updated);
+    }
+  }, [validCategoryNames.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also clean up the current form's selected expertise
+  useEffect(() => {
+    setExpertise((prev) => prev.filter((exp) => validCategoryNames.includes(exp)));
+  }, [validCategoryNames.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleExpertise = (category) => {
     setExpertise((current) =>
@@ -159,20 +193,34 @@ export default function AdjusterForm({
           adjusters.map((adjuster) => (
             <div
               key={adjuster.id}
-              className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+              className={`flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between ${
+                adjuster.expertise.length === 0
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-slate-200'
+              }`}
             >
               <div>
                 <p className="font-medium text-slate-900">{adjuster.name}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {adjuster.expertise.map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
+                {adjuster.expertise.length === 0 ? (
+                  <p className="mt-1 text-xs font-medium text-red-600">
+                    ⚠️ No expertise assigned — please remove or reassign categories
+                  </p>
+                ) : (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {adjuster.expertise.map((item) => (
+                      <span
+                        key={item}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          validCategoryNames.includes(item)
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'bg-red-50 text-red-600 line-through'
+                        }`}
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button
